@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>🐼 熊猫代币管理</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #1a1a2e; color: #eee; padding: 15px; max-width: 600px; margin: auto; }
+        h1 { color: #f0a500; font-size: 22px; margin-bottom: 15px; }
+        .section { background: #16213e; padding: 15px; margin-bottom: 15px; border-radius: 12px; }
+        h2 { color: #f0a500; font-size: 18px; margin-bottom: 10px; }
+        .row { margin: 10px 0; display: flex; align-items: center; flex-wrap: wrap; }
+        label { width: 130px; font-size: 14px; font-weight: bold; }
+        input, select, button { padding: 8px 12px; border-radius: 6px; border: none; font-size: 14px; margin: 3px 5px 3px 0; }
+        input[type="text"], input[type="number"] { flex: 1; min-width: 150px; background: #0f3460; color: white; }
+        select { background: #0f3460; color: white; }
+        button { background: #f0a500; color: #1a1a2e; font-weight: bold; cursor: pointer; }
+        button:hover { background: #ffc300; }
+        .note { font-size: 12px; color: #aaa; margin-top: 3px; flex-basis: 100%; }
+        .status { color: #4ecca3; font-size: 14px; margin-left: 5px; }
+        #contractAddressInput { width: 100%; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <h1>🐼 熊猫代币 - 中文控制面板</h1>
+    <div class="section">
+        <label>合约地址</label>
+        <input type="text" id="contractAddress" placeholder="0x..." style="width: 100%;">
+        <div class="row" style="margin-top: 10px;">
+            <button onclick="connectContract()">连接合约</button>
+            <button onclick="connectWallet()">连接钱包</button>
+            <span id="walletStatus" class="status">未连接</span>
+        </div>
+    </div>
+    <div id="panels"></div>
+
+    <script>
+        let contract, signer;
+        const contractABI = [
+            // ✂️ 在这里粘贴你的ABI
+        ];
+
+        async function connectWallet() {
+            if (window.ethereum) {
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
+                const provider = new ethers.providers.Web3Provider(window.ethereum);
+                signer = provider.getSigner();
+                document.getElementById('walletStatus').innerText = '✅ 已连接：' + (await signer.getAddress()).slice(0,6)+'...';
+            } else {
+                alert('请安装MetaMask App并在其内置浏览器打开此链接');
+            }
+        }
+
+        async function connectContract() {
+            const addr = document.getElementById('contractAddress').value;
+            if (!addr) return alert('请输入合约地址');
+            if (!signer) await connectWallet();
+            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            contract = new ethers.Contract(addr, contractABI, provider.getSigner());
+            alert('合约已连接！');
+        }
+
+        function buildUI() {
+            const sections = [
+                { title: '⚡ 交易控制', items: [
+                    { label: '开启交易', func: 'recoverTransaction', type: 'action' },
+                    { label: '暂停交易', func: 'PauseTransaction', type: 'action' },
+                    { label: '暂停功能开关', func: 'setEnablePause', type: 'bool' }
+                ]},
+                { title: '💰 钱包限制', items: [
+                    { label: '启用钱包限额', func: 'setEnableWalletLimit', type: 'bool' },
+                    { label: '最大持币量', func: 'changeWalletLimit', type: 'uint256', note: '精度10，如100000=100个币' }
+                ]},
+                { title: '📋 白名单/黑名单', items: [
+                    { label: '设置全功能白名单', func: 'setWhiteList', type: 'addressBoolArray' },
+                    { label: '设置手续费白名单', func: 'setFeeWhiteList', type: 'addressBoolArray' },
+                    { label: '黑名单功能开关', func: 'setEnableRewardList', type: 'bool' },
+                    { label: '批量拉黑', func: 'multi_bclist', type: 'addressBoolArray' }
+                ]},
+                { title: '🧾 税率设置', items: [
+                    { label: '允许修改税率', func: 'setEnableChangeTax', type: 'bool' },
+                    { label: '设置买卖税率 (6个数字)', func: 'completeCustoms', type: 'uint256[6]', note: '[买基金,买LP,买销毁,卖基金,卖LP,卖销毁]' },
+                    { label: '自动兑换比例', func: 'setNumTokensSellRate', type: 'uint256' },
+                    { label: '添加流动性费率', func: 'setAddLiquidityFee', type: 'uint256', note: '最大2500' },
+                    { label: '移除流动性费率', func: 'setRemoveLiquidityFee', type: 'uint256', note: '最大10000' }
+                ]},
+                { title: '🔥 LP销毁', items: [
+                    { label: '销毁比例 (0-100)', func: 'setlpBurnRate', type: 'uint256' },
+                    { label: '销毁频率 (小时)', func: 'setlpBurnFrequency', type: 'uint256' }
+                ]},
+                { title: '🛡️ 防狙击', items: [
+                    { label: '启用杀区块', func: 'setEnableKillBlock', type: 'bool' },
+                    { label: '保护区块数', func: 'setkb', type: 'uint256' }
+                ]},
+                { title: '🎁 空投', items: [
+                    { label: '启用空投', func: 'setAirDropEnable', type: 'bool' },
+                    { label: '空投人数 (1-5)', func: 'setAirdropNumbs', type: 'uint256' }
+                ]},
+                { title: '🏭 增发', items: [
+                    { label: '启用增发', func: 'setEnableMint', type: 'bool' },
+                    { label: '增发代币', func: 'mintTokens', type: 'addressUint', note: '地址,数量' }
+                ]},
+                { title: '💎 预售参数', items: [
+                    { label: '预售价格', func: 'setPrice', type: 'uint256' },
+                    { label: '每份数量', func: 'setAmountPerUnits', type: 'uint256' },
+                    { label: '预售总份数', func: 'setMintLimit', type: 'uint256' }
+                ]},
+                { title: '⏳ 交易冷却', items: [
+                    { label: '启用冷却', func: 'setCooldownEnabled', type: 'bool' },
+                    { label: '冷却时间 (秒)', func: 'setCooldownTime', type: 'uint256' }
+                ]},
+                { title: '👑 所有权', items: [
+                    { label: '转移所有权', func: 'transferOwnership', type: 'address' }
+                ]},
+                { title: '🏦 基金与交易对', items: [
+                    { label: '设置基金地址', func: 'setFundAddress', type: 'address' },
+                    { label: '设置交易对', func: 'setSwapPairList', type: 'addressBool' },
+                    { label: '防闪电贷开关', func: 'setAntiSYNCEnable', type: 'bool' }
+                ]},
+                { title: '💸 提现', items: [
+                    { label: '提取代币/BNB', func: 'setClaims', type: 'addressUint', note: '代币地址(0x0为BNB), 数量' }
+                ]}
+            ];
+
+            let html = '';
+            for (let sec of sections) {
+                html += `<div class="section"><h2>${sec.title}</h2>`;
+                for (let item of sec.items) {
+                    let inputHtml = '';
+                    if (item.type === 'action') {
+                        inputHtml = `<button onclick="callContract('${item.func}')">执行</button>`;
+                    } else if (item.type === 'bool') {
+                        inputHtml = `<select id="${item.func}_val"><option value="true">开启</option><option value="false">关闭</option></select>`;
+                        inputHtml += `<button onclick="callContract('${item.func}', document.getElementById('${item.func}_val').value)">设置</button>`;
+                    } else if (item.type === 'uint256') {
+                        inputHtml = `<input type="text" id="${item.func}_val" placeholder="数字">`;
+                        inputHtml += `<button onclick="callContract('${item.func}', document.getElementById('${item.func}_val').value)">设置</button>`;
+                    } else if (item.type === 'address') {
+                        inputHtml = `<input type="text" id="${item.func}_val" placeholder="0x...">`;
+                        inputHtml += `<button onclick="callContract('${item.func}', document.getElementById('${item.func}_val').value)">设置</button>`;
+                    } else if (item.type === 'addressBool') {
+                        inputHtml = `<input type="text" id="${item.func}_addr" placeholder="地址">`;
+                        inputHtml += `<select id="${item.func}_bool"><option value="true">true</option><option value="false">false</option></select>`;
+                        inputHtml += `<button onclick="callContract('${item.func}', document.getElementById('${item.func}_addr').value, document.getElementById('${item.func}_bool').value)">设置</button>`;
+                    } else if (item.type === 'addressBoolArray') {
+                        inputHtml = `<input type="text" id="${item.func}_addr" placeholder="地址,地址 (逗号分隔)">`;
+                        inputHtml += `<select id="${item.func}_bool"><option value="true">true</option><option value="false">false</option></select>`;
+                        inputHtml += `<button onclick="handleArrayCall('${item.func}')">设置</button>`;
+                    } else if (item.type === 'uint256[6]') {
+                        inputHtml = `<input type="text" id="${item.func}_val" placeholder="6个数字,逗号分隔">`;
+                        inputHtml += `<button onclick="handleUint6Call('${item.func}')">设置</button>`;
+                    } else if (item.type === 'addressUint') {
+                        inputHtml = `<input type="text" id="${item.func}_addr" placeholder="地址">`;
+                        inputHtml += `<input type="text" id="${item.func}_amount" placeholder="数量">`;
+                        inputHtml += `<button onclick="callContract('${item.func}', document.getElementById('${item.func}_addr').value, document.getElementById('${item.func}_amount').value)">设置</button>`;
+                    }
+                    let note = item.note ? `<div class="note">${item.note}</div>` : '';
+                    html += `<div class="row"><label>${item.label}</label>${inputHtml}${note}</div>`;
+                }
+                html += `</div>`;
+            }
+            document.getElementById('panels').innerHTML = html;
+        }
+
+        async function callContract(funcName, ...args) {
+            if (!contract) return alert('请先输入合约地址并连接合约！');
+            try {
+                let parsedArgs = args.map(arg => {
+                    if (arg === 'true') return true;
+                    if (arg === 'false') return false;
+                    if (!isNaN(arg) && arg.trim() !== '') return ethers.BigNumber.from(arg);
+                    return arg;
+                });
+                let tx = await contract[funcName](...parsedArgs);
+                await tx.wait();
+                alert('✅ 交易成功！');
+            } catch (e) {
+                alert('❌ 失败：' + (e.reason || e.message));
+            }
+        }
+
+        function handleArrayCall(funcName) {
+            let addrStr = document.getElementById(funcName + '_addr').value;
+            let boolVal = document.getElementById(funcName + '_bool').value === 'true';
+            if (!addrStr) return alert('请输入地址');
+            let addrArray = addrStr.split(',').map(a => a.trim());
+            callContract(funcName, addrArray, boolVal);
+        }
+
+        function handleUint6Call(funcName) {
+            let valStr = document.getElementById(funcName + '_val').value;
+            if (!valStr) return alert('请输入6个数字');
+            let arr = valStr.split(',').map(v => ethers.BigNumber.from(v.trim()));
+            if (arr.length !== 6) return alert('必须输入6个数字');
+            callContract(funcName, arr);
+        }
+
+        buildUI();
+    </script>
+</body>
+</html>
