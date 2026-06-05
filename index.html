@@ -2,86 +2,54 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>🐼 熊猫代币管理面板</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>🐼 熊猫代币管理</title>
     <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
     <style>
-        body { font-family: 'Microsoft YaHei', sans-serif; background: #1a1a2e; color: #eee; max-width: 800px; margin: 0 auto; padding: 20px; }
-        h2 { color: #f0a500; }
-        .section { background: #16213e; padding: 20px; margin: 20px 0; border-radius: 12px; }
-        .row { margin: 12px 0; display: flex; align-items: center; flex-wrap: wrap; }
-        label { width: 200px; font-weight: bold; }
-        input, select, button { padding: 8px 12px; border-radius: 6px; border: none; font-size: 14px; }
-        input[type="text"], input[type="number"] { width: 260px; background: #0f3460; color: white; }
-        button { background: #f0a500; color: #1a1a2e; font-weight: bold; cursor: pointer; margin-left: 10px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #1a1a2e; color: #eee; padding: 15px; max-width: 600px; margin: auto; }
+        h1 { color: #f0a500; font-size: 22px; margin-bottom: 15px; }
+        .section { background: #16213e; padding: 15px; margin-bottom: 15px; border-radius: 12px; }
+        h2 { color: #f0a500; font-size: 18px; margin-bottom: 10px; }
+        .row { margin: 10px 0; display: flex; align-items: center; flex-wrap: wrap; }
+        label { width: 130px; font-size: 14px; font-weight: bold; }
+        input, select, button { padding: 8px 12px; border-radius: 6px; border: none; font-size: 14px; margin: 3px 5px 3px 0; }
+        input[type="text"], input[type="number"] { flex: 1; min-width: 150px; background: #0f3460; color: white; }
+        select { background: #0f3460; color: white; }
+        button { background: #f0a500; color: #1a1a2e; font-weight: bold; cursor: pointer; }
         button:hover { background: #ffc300; }
-        .status { color: #4ecca3; margin-left: 10px; }
-        .error { color: #ff6b6b; }
-        .note { font-size: 12px; color: #aaa; margin-left: 200px; }
+        .note { font-size: 12px; color: #aaa; margin-top: 3px; flex-basis: 100%; }
+        .status { color: #4ecca3; font-size: 14px; margin-left: 5px; }
+        #contractAddressInput { width: 100%; margin-bottom: 10px; }
     </style>
 </head>
 <body>
     <h1>🐼 熊猫代币 - 中文控制面板</h1>
     <div class="section">
-        <div class="row">
-            <label>合约地址</label>
-            <input type="text" id="contractAddress" placeholder="0x..." style="width: 420px;">
+        <label>合约地址</label>
+        <input type="text" id="contractAddress" placeholder="0x..." style="width: 100%;">
+        <div class="row" style="margin-top: 10px;">
             <button onclick="connectContract()">连接合约</button>
-        </div>
-        <div class="row">
-            <label>钱包状态</label>
-            <span id="walletStatus" class="status">未连接</span>
             <button onclick="connectWallet()">连接钱包</button>
+            <span id="walletStatus" class="status">未连接</span>
         </div>
     </div>
-
-    <!-- 各种功能区块将由JS动态生成 -->
     <div id="panels"></div>
 
     <script>
-        let contract, signer, provider;
-        const contractABI = [ [{"type":"constructor","inputs":[{"name":"stringParams","type":"string[]"},{"name":"addressParams","type":"address[]"},{"name":"numberParams","type":"uint256[]"},{"name":"boolParams","type":"bool[]"}]},{"type":"function","name":"PauseTransaction","inputs":[],"outputs":[]},{"type":"function","name":"_allWhiteList","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_buyFundFee","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_buyLPFee","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_feeWhiteList","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_mainPair","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"_rewardList","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_sellFundFee","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_sellLPFee","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_swapPairList","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_swapRouter","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"_tokenDistributor","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"addLiquidityFee","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"airdropEnable","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"airdropNumbs","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"allowance","inputs":[{"name":"owner","type":"address"},{"name":"spender","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"amountPerUnits","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"antiSYNC","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"approve","inputs":[{"name":"spender","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"balanceOf","inputs":[{"name":"account","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"buy_burnFee","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"changeWalletLimit","inputs":[{"name":"_amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"completeCustoms","inputs":[{"name":"customs","type":"uint256[]"}],"outputs":[]},{"type":"function","name":"cooldownEnabled","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"cooldownTime","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"currency","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"currencyIsEth","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"deadAddress","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"decimals","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"decreaseAllowance","inputs":[{"name":"spender","type":"address"},{"name":"subtractedValue","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableChangeTax","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableKillBlock","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableMint","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enablePause","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableRewardList","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableWalletLimit","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"fundAddress","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"getCirculatingSupply","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"increaseAllowance","inputs":[{"name":"spender","type":"address"},{"name":"addedValue","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"isReward","inputs":[{"name":"account","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"kb","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lastGlobalBuyTime","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lastLpBurnTime","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lastSellTime","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lpBurnFrequency","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lpBurnRate","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"maxWalletAmount","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"mintTokens","inputs":[{"name":"account","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"mintLimit","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"minted","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"multi_bclist","inputs":[{"name":"addresses","type":"address[]"},{"name":"value","type":"bool"}],"outputs":[]},{"type":"function","name":"name","inputs":[],"outputs":[{"name":"","type":"string"}]},{"type":"function","name":"numTokensSellRate","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"owner","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"pause","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"price","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"recoverTransaction","inputs":[],"outputs":[]},{"type":"function","name":"removeLiquidityFee","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"renounceOwnership","inputs":[],"outputs":[]},{"type":"function","name":"sell_burnFee","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"setAddLiquidityFee","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setAirDropEnable","inputs":[{"name":"status","type":"bool"}],"outputs":[]},{"type":"function","name":"setAirdropNumbs","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setAmountPerUnits","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setAntiSYNCEnable","inputs":[{"name":"s","type":"bool"}],"outputs":[]},{"type":"function","name":"setClaims","inputs":[{"name":"token","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"setCooldownEnabled","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setCooldownTime","inputs":[{"name":"_seconds","type":"uint256"}],"outputs":[]},{"type":"function","name":"setEnableChangeTax","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableKillBlock","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableMint","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnablePause","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableRewardList","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableWalletLimit","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setFeeWhiteList","inputs":[{"name":"addr","type":"address[]"},{"name":"enable","type":"bool"}],"outputs":[]},{"type":"function","name":"setFundAddress","inputs":[{"name":"addr","type":"address"}],"outputs":[]},{"type":"function","name":"setMintLimit","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setNumTokensSellRate","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setPrice","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setRemoveLiquidityFee","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setSwapPairList","inputs":[{"name":"addr","type":"address"},{"name":"enable","type":"bool"}],"outputs":[]},{"type":"function","name":"setWhiteList","inputs":[{"name":"addr","type":"address[]"},{"name":"enable","type":"bool"}],"outputs":[]},{"type":"function","name":"setkb","inputs":[{"name":"a","type":"uint256"}],"outputs":[]},{"type":"function","name":"setlpBurnFrequency","inputs":[{"name":"_hour","type":"uint256"}],"outputs":[]},{"type":"function","name":"setlpBurnRate","inputs":[{"name":"_rate","type":"uint256"}],"outputs":[]},{"type":"function","name":"startTradeBlock","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"symbol","inputs":[],"outputs":[{"name":"","type":"string"}]},{"type":"function","name":"totalFundAmountReceive","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"totalSupply","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"transfer","inputs":[{"name":"recipient","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"transferFrom","inputs":[{"name":"sender","type":"address"},{"name":"recipient","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"transferOwnership","inputs":[{"name":"newOwner","type":"address"}],"outputs":[]},{"type":"receive"},{"type":"event","name":"Approval","inputs":[{"name":"owner","type":"address","indexed":true},{"name":"spender","type":"address","indexed":true},{"name":"value","type":"uint256"}]},{"type":"event","name":"AutoNukeLP","inputs":[]},{"type":"event","name":"Failed_swapExactTokensForTokensSupportingFeeOnTransferTokens","inputs":[{"name":"value","type":"uint256"}]},{"type":"event","name":"Failed_addLiquidity","inputs":[]},{"type":"event","name":"Minted","inputs":[{"name":"to","type":"address","indexed":true},{"name":"amount","type":"uint256"},{"name":"ethAmount","type":"uint256"}]},{"type":"event","name":"OwnershipTransferred","inputs":[{"name":"previousOwner","type":"address","indexed":true},{"name":"newOwner","type":"address","indexed":true}]},{"type":"event","name":"Refund","inputs":[{"name":"from","type":"address","indexed":true},{"name":"bnb","type":"uint256"}]},{"type":"event","name":"Transfer","inputs":[{"name":"from","type":"address","indexed":true},{"name":"to","type":"address","indexed":true},{"name":"value","type":"uint256"}]}]/* 这里需要你的合约ABI，可以先用一个简化版，包含所有写函数 */ 
-            "function recoverTransaction() external",
-            "function PauseTransaction() external",
-            "function setEnablePause(bool) external",
-            "function setEnableWalletLimit(bool) external",
-            "function changeWalletLimit(uint256) external",
-            "function setWhiteList(address[],bool) external",
-            "function setFeeWhiteList(address[],bool) external",
-            "function setEnableRewardList(bool) external",
-            "function multi_bclist(address[],bool) external",
-            "function setEnableChangeTax(bool) external",
-            "function completeCustoms(uint256[6]) external",
-            "function setNumTokensSellRate(uint256) external",
-            "function setAddLiquidityFee(uint256) external",
-            "function setRemoveLiquidityFee(uint256) external",
-            "function setlpBurnRate(uint256) external",
-            "function setlpBurnFrequency(uint256) external",
-            "function setEnableKillBlock(bool) external",
-            "function setkb(uint256) external",
-            "function setAirDropEnable(bool) external",
-            "function setAirdropNumbs(uint256) external",
-            "function setEnableMint(bool) external",
-            "function mintTokens(address,uint256) external",
-            "function setPrice(uint256) external",
-            "function setAmountPerUnits(uint256) external",
-            "function setMintLimit(uint256) external",
-            "function setCooldownEnabled(bool) external",
-            "function setCooldownTime(uint256) external",
-            "function transferOwnership(address) external",
-            "function setFundAddress(address) external",
-            "function setSwapPairList(address,bool) external",
-            "function setAntiSYNCEnable(bool) external",
-            "function setClaims(address,uint256) external"
+        let contract, signer;
+        const contractABI = [
+            [{"type":"constructor","inputs":[{"name":"stringParams","type":"string[]"},{"name":"addressParams","type":"address[]"},{"name":"numberParams","type":"uint256[]"},{"name":"boolParams","type":"bool[]"}]},{"type":"function","name":"PauseTransaction","inputs":[],"outputs":[]},{"type":"function","name":"_allWhiteList","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_buyFundFee","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_buyLPFee","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_feeWhiteList","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_mainPair","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"_rewardList","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_sellFundFee","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_sellLPFee","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_swapPairList","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_swapRouter","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"_tokenDistributor","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"addLiquidityFee","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"airdropEnable","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"airdropNumbs","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"allowance","inputs":[{"name":"owner","type":"address"},{"name":"spender","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"amountPerUnits","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"antiSYNC","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"approve","inputs":[{"name":"spender","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"balanceOf","inputs":[{"name":"account","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"buy_burnFee","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"changeWalletLimit","inputs":[{"name":"_amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"completeCustoms","inputs":[{"name":"customs","type":"uint256[]"}],"outputs":[]},{"type":"function","name":"cooldownEnabled","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"cooldownTime","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"currency","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"currencyIsEth","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"deadAddress","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"decimals","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"decreaseAllowance","inputs":[{"name":"spender","type":"address"},{"name":"subtractedValue","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableChangeTax","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableKillBlock","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableMint","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enablePause","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableRewardList","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableWalletLimit","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"fundAddress","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"getCirculatingSupply","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"increaseAllowance","inputs":[{"name":"spender","type":"address"},{"name":"addedValue","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"isReward","inputs":[{"name":"account","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"kb","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lastGlobalBuyTime","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lastLpBurnTime","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lastSellTime","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lpBurnFrequency","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lpBurnRate","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"maxWalletAmount","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"mintTokens","inputs":[{"name":"account","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"mintLimit","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"minted","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"multi_bclist","inputs":[{"name":"addresses","type":"address[]"},{"name":"value","type":"bool"}],"outputs":[]},{"type":"function","name":"name","inputs":[],"outputs":[{"name":"","type":"string"}]},{"type":"function","name":"numTokensSellRate","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"owner","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"pause","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"price","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"recoverTransaction","inputs":[],"outputs":[]},{"type":"function","name":"removeLiquidityFee","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"renounceOwnership","inputs":[],"outputs":[]},{"type":"function","name":"sell_burnFee","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"setAddLiquidityFee","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setAirDropEnable","inputs":[{"name":"status","type":"bool"}],"outputs":[]},{"type":"function","name":"setAirdropNumbs","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setAmountPerUnits","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setAntiSYNCEnable","inputs":[{"name":"s","type":"bool"}],"outputs":[]},{"type":"function","name":"setClaims","inputs":[{"name":"token","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"setCooldownEnabled","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setCooldownTime","inputs":[{"name":"_seconds","type":"uint256"}],"outputs":[]},{"type":"function","name":"setEnableChangeTax","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableKillBlock","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableMint","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnablePause","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableRewardList","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableWalletLimit","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setFeeWhiteList","inputs":[{"name":"addr","type":"address[]"},{"name":"enable","type":"bool"}],"outputs":[]},{"type":"function","name":"setFundAddress","inputs":[{"name":"addr","type":"address"}],"outputs":[]},{"type":"function","name":"setMintLimit","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setNumTokensSellRate","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setPrice","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setRemoveLiquidityFee","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setSwapPairList","inputs":[{"name":"addr","type":"address"},{"name":"enable","type":"bool"}],"outputs":[]},{"type":"function","name":"setWhiteList","inputs":[{"name":"addr","type":"address[]"},{"name":"enable","type":"bool"}],"outputs":[]},{"type":"function","name":"setkb","inputs":[{"name":"a","type":"uint256"}],"outputs":[]},{"type":"function","name":"setlpBurnFrequency","inputs":[{"name":"_hour","type":"uint256"}],"outputs":[]},{"type":"function","name":"setlpBurnRate","inputs":[{"name":"_rate","type":"uint256"}],"outputs":[]},{"type":"function","name":"startTradeBlock","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"symbol","inputs":[],"outputs":[{"name":"","type":"string"}]},{"type":"function","name":"totalFundAmountReceive","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"totalSupply","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"transfer","inputs":[{"name":"recipient","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"transferFrom","inputs":[{"name":"sender","type":"address"},{"name":"recipient","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"transferOwnership","inputs":[{"name":"newOwner","type":"address"}],"outputs":[]},{"type":"receive"},{"type":"event","name":"Approval","inputs":[{"name":"owner","type":"address","indexed":true},{"name":"spender","type":"address","indexed":true},{"name":"value","type":"uint256"}]},{"type":"event","name":"AutoNukeLP","inputs":[]},{"type":"event","name":"Failed_swapExactTokensForTokensSupportingFeeOnTransferTokens","inputs":[{"name":"value","type":"uint256"}]},{"type":"event","name":"Failed_addLiquidity","inputs":[]},{"type":"event","name":"Minted","inputs":[{"name":"to","type":"address","indexed":true},{"name":"amount","type":"uint256"},{"name":"ethAmount","type":"uint256"}]},{"type":"event","name":"OwnershipTransferred","inputs":[{"name":"previousOwner","type":"address","indexed":true},{"name":"newOwner","type":"address","indexed":true}]},{"type":"event","name":"Refund","inputs":[{"name":"from","type":"address","indexed":true},{"name":"bnb","type":"uint256"}]},{"type":"event","name":"Transfer","inputs":[{"name":"from","type":"address","indexed":true},{"name":"to","type":"address","indexed":true},{"name":"value","type":"uint256"}]}]
         ];
 
         async function connectWallet() {
             if (window.ethereum) {
                 await window.ethereum.request({ method: 'eth_requestAccounts' });
-                provider = new ethers.providers.Web3Provider(window.ethereum);
+                const provider = new ethers.providers.Web3Provider(window.ethereum);
                 signer = provider.getSigner();
-                document.getElementById('walletStatus').innerText = '已连接：' + (await signer.getAddress());
+                document.getElementById('walletStatus').innerText = '✅ 已连接：' + (await signer.getAddress()).slice(0,6)+'...';
             } else {
-                alert('请安装MetaMask！');
+                alert('请安装MetaMask App并在其内置浏览器打开此链接');
             }
         }
 
@@ -89,13 +57,12 @@
             const addr = document.getElementById('contractAddress').value;
             if (!addr) return alert('请输入合约地址');
             if (!signer) await connectWallet();
-            contract = new ethers.Contract(addr, contractABI, signer);
+            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            contract = new ethers.Contract(addr, contractABI, provider.getSigner());
             alert('合约已连接！');
         }
 
         function buildUI() {
-            const panels = document.getElementById('panels');
-            // 定义中文菜单结构
             const sections = [
                 { title: '⚡ 交易控制', items: [
                     { label: '开启交易', func: 'recoverTransaction', type: 'action' },
@@ -107,10 +74,10 @@
                     { label: '最大持币量', func: 'changeWalletLimit', type: 'uint256', note: '精度10，如100000=100个币' }
                 ]},
                 { title: '📋 白名单/黑名单', items: [
-                    { label: '设置全功能白名单 (地址, true/false)', func: 'setWhiteList', type: 'addressBoolArray' },
-                    { label: '设置手续费白名单 (地址, true/false)', func: 'setFeeWhiteList', type: 'addressBoolArray' },
+                    { label: '设置全功能白名单', func: 'setWhiteList', type: 'addressBoolArray' },
+                    { label: '设置手续费白名单', func: 'setFeeWhiteList', type: 'addressBoolArray' },
                     { label: '黑名单功能开关', func: 'setEnableRewardList', type: 'bool' },
-                    { label: '批量拉黑 (地址数组, true)', func: 'multi_bclist', type: 'addressBoolArray' }
+                    { label: '批量拉黑', func: 'multi_bclist', type: 'addressBoolArray' }
                 ]},
                 { title: '🧾 税率设置', items: [
                     { label: '允许修改税率', func: 'setEnableChangeTax', type: 'bool' },
@@ -133,7 +100,7 @@
                 ]},
                 { title: '🏭 增发', items: [
                     { label: '启用增发', func: 'setEnableMint', type: 'bool' },
-                    { label: '增发代币 (地址, 数量)', func: 'mintTokens', type: 'addressUint' }
+                    { label: '增发代币', func: 'mintTokens', type: 'addressUint', note: '地址,数量' }
                 ]},
                 { title: '💎 预售参数', items: [
                     { label: '预售价格', func: 'setPrice', type: 'uint256' },
@@ -145,21 +112,21 @@
                     { label: '冷却时间 (秒)', func: 'setCooldownTime', type: 'uint256' }
                 ]},
                 { title: '👑 所有权', items: [
-                    { label: '转移所有权 (新地址)', func: 'transferOwnership', type: 'address' }
+                    { label: '转移所有权', func: 'transferOwnership', type: 'address' }
                 ]},
                 { title: '🏦 基金与交易对', items: [
                     { label: '设置基金地址', func: 'setFundAddress', type: 'address' },
-                    { label: '设置交易对 (地址, true/false)', func: 'setSwapPairList', type: 'addressBool' },
+                    { label: '设置交易对', func: 'setSwapPairList', type: 'addressBool' },
                     { label: '防闪电贷开关', func: 'setAntiSYNCEnable', type: 'bool' }
                 ]},
                 { title: '💸 提现', items: [
-                    { label: '提取代币/ETH (代币地址, 数量)', func: 'setClaims', type: 'addressUint', note: '地址填0x0为提BNB' }
+                    { label: '提取代币/BNB', func: 'setClaims', type: 'addressUint', note: '代币地址(0x0为BNB), 数量' }
                 ]}
             ];
 
             let html = '';
             for (let sec of sections) {
-                html += `<div class="section"><h3>${sec.title}</h3>`;
+                html += `<div class="section"><h2>${sec.title}</h2>`;
                 for (let item of sec.items) {
                     let inputHtml = '';
                     if (item.type === 'action') {
@@ -168,7 +135,7 @@
                         inputHtml = `<select id="${item.func}_val"><option value="true">开启</option><option value="false">关闭</option></select>`;
                         inputHtml += `<button onclick="callContract('${item.func}', document.getElementById('${item.func}_val').value)">设置</button>`;
                     } else if (item.type === 'uint256') {
-                        inputHtml = `<input type="text" id="${item.func}_val" placeholder="输入数字">`;
+                        inputHtml = `<input type="text" id="${item.func}_val" placeholder="数字">`;
                         inputHtml += `<button onclick="callContract('${item.func}', document.getElementById('${item.func}_val').value)">设置</button>`;
                     } else if (item.type === 'address') {
                         inputHtml = `<input type="text" id="${item.func}_val" placeholder="0x...">`;
@@ -178,40 +145,39 @@
                         inputHtml += `<select id="${item.func}_bool"><option value="true">true</option><option value="false">false</option></select>`;
                         inputHtml += `<button onclick="callContract('${item.func}', document.getElementById('${item.func}_addr').value, document.getElementById('${item.func}_bool').value)">设置</button>`;
                     } else if (item.type === 'addressBoolArray') {
-                        inputHtml = `<input type="text" id="${item.func}_addr" placeholder="地址数组，逗号分隔，如 0x...,0x...">`;
+                        inputHtml = `<input type="text" id="${item.func}_addr" placeholder="地址,地址 (逗号分隔)">`;
                         inputHtml += `<select id="${item.func}_bool"><option value="true">true</option><option value="false">false</option></select>`;
                         inputHtml += `<button onclick="handleArrayCall('${item.func}')">设置</button>`;
                     } else if (item.type === 'uint256[6]') {
-                        inputHtml = `<input type="text" id="${item.func}_val" placeholder="6个数字，逗号分隔">`;
+                        inputHtml = `<input type="text" id="${item.func}_val" placeholder="6个数字,逗号分隔">`;
                         inputHtml += `<button onclick="handleUint6Call('${item.func}')">设置</button>`;
                     } else if (item.type === 'addressUint') {
                         inputHtml = `<input type="text" id="${item.func}_addr" placeholder="地址">`;
                         inputHtml += `<input type="text" id="${item.func}_amount" placeholder="数量">`;
                         inputHtml += `<button onclick="callContract('${item.func}', document.getElementById('${item.func}_addr').value, document.getElementById('${item.func}_amount').value)">设置</button>`;
                     }
-                    let note = item.note ? `<span class="note">${item.note}</span>` : '';
+                    let note = item.note ? `<div class="note">${item.note}</div>` : '';
                     html += `<div class="row"><label>${item.label}</label>${inputHtml}${note}</div>`;
                 }
                 html += `</div>`;
             }
-            panels.innerHTML = html;
+            document.getElementById('panels').innerHTML = html;
         }
 
         async function callContract(funcName, ...args) {
-            if (!contract) return alert('请先连接合约！');
+            if (!contract) return alert('请先输入合约地址并连接合约！');
             try {
-                // 转换布尔和数字
-                let parsedArgs = args.map((arg, i) => {
+                let parsedArgs = args.map(arg => {
                     if (arg === 'true') return true;
                     if (arg === 'false') return false;
-                    if (!isNaN(arg) && arg.toString().trim() !== '') return ethers.BigNumber.from(arg);
+                    if (!isNaN(arg) && arg.trim() !== '') return ethers.BigNumber.from(arg);
                     return arg;
                 });
                 let tx = await contract[funcName](...parsedArgs);
                 await tx.wait();
                 alert('✅ 交易成功！');
             } catch (e) {
-                alert('❌ 失败：' + e.message);
+                alert('❌ 失败：' + (e.reason || e.message));
             }
         }
 
