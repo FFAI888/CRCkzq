@@ -2,60 +2,68 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>🐼 熊猫代币管理</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🐼 熊猫代币管理 V2</title>
     <script src="https://cdn.bootcdn.net/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #1a1a2e; color: #eee; padding: 15px; max-width: 600px; margin: auto; }
-        h1 { color: #f0a500; font-size: 22px; margin-bottom: 15px; }
-        .section { background: #16213e; padding: 15px; margin-bottom: 15px; border-radius: 12px; }
-        h2 { color: #f0a500; font-size: 18px; margin-bottom: 10px; }
-        .row { margin: 10px 0; display: flex; align-items: center; flex-wrap: wrap; }
-        label { width: 130px; font-size: 14px; font-weight: bold; }
-        input, select, button { padding: 8px 12px; border-radius: 6px; border: none; font-size: 14px; margin: 3px 5px 3px 0; }
-        input[type="text"], input[type="number"] { flex: 1; min-width: 150px; background: #0f3460; color: white; }
-        select { background: #0f3460; color: white; }
-        button { background: #f0a500; color: #1a1a2e; font-weight: bold; cursor: pointer; }
-        button:hover { background: #ffc300; }
-        .note { font-size: 12px; color: #aaa; margin-top: 3px; flex-basis: 100%; }
-        .status { color: #4ecca3; font-size: 14px; margin-left: 5px; }
+        body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #0d1117; color: #c9d1d9; padding: 16px; max-width: 680px; margin: auto; }
+        h1 { color: #f0a500; font-size: 24px; margin-bottom: 20px; text-align: center; }
+        .section { background: #161b22; border: 1px solid #30363d; padding: 16px; margin-bottom: 16px; border-radius: 8px; }
+        h2 { color: #58a6ff; font-size: 18px; margin-bottom: 12px; border-bottom: 1px solid #30363d; padding-bottom: 8px; }
+        .row { display: flex; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+        .row label { width: 130px; font-weight: bold; color: #8b949e; font-size: 14px; flex-shrink: 0; }
+        .row input, .row select { background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; padding: 8px 10px; border-radius: 6px; font-size: 14px; margin-right: 8px; flex: 1; min-width: 120px; }
+        .row select { flex: 0.5; min-width: 80px; }
+        .row button { background: #238636; color: white; border: 1px solid #2ea043; padding: 8px 14px; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; white-space: nowrap; }
+        .row button:hover { background: #2ea043; }
+        .row .unit { color: #8b949e; font-size: 12px; margin-left: 5px; white-space: nowrap; }
+        .note { font-size: 11px; color: #8b949e; margin-top: 4px; width: 100%; padding-left: 130px; }
+        .status-row { display: flex; align-items: center; margin-bottom: 15px; }
+        .status-row label { width: 80px; color: #8b949e; font-weight: bold; }
+        #walletStatus { color: #3fb950; margin-left: 5px; font-size: 13px; }
+        #walletError { color: #f85149; font-size: 13px; margin-top: 5px; }
+        .contract-input { width: 100%; padding: 8px; background: #0d1117; border: 1px solid #30363d; color: white; border-radius: 6px; margin-bottom: 12px; }
     </style>
 </head>
 <body>
-    <h1>🐼 熊猫代币 - 中文控制面板</h1>
+    <h1>🐼 熊猫代币 · 控制中心</h1>
+
+    <!-- 顶部连接区 -->
     <div class="section">
-        <label>合约地址</label>
-        <input type="text" id="contractAddress" placeholder="0x..." style="width: 100%; margin-bottom:10px;">
-        <div class="row">
-            <button onclick="connectContract()">连接合约</button>
-            <button onclick="connectWallet()">连接钱包</button>
-            <span id="walletStatus" class="status">未连接</span>
+        <input type="text" class="contract-input" id="contractAddress" placeholder="请输入你的代币合约地址 (0x...)">
+        <div class="status-row">
+            <button onclick="connectWallet()" style="background:#1f6feb; border-color:#1f6feb; margin-right:10px;">连接钱包</button>
+            <button onclick="connectContract()" style="background:#f0a500; border-color:#f0a500; color:black;">连接合约</button>
+            <span id="walletStatus">⚪ 未连接</span>
         </div>
-        <div id="walletError" style="color:#ff6b6b; margin-top:8px;"></div>
+        <div id="walletError"></div>
     </div>
+
     <div id="panels"></div>
 
     <script>
+        // 等待库加载
         function waitForEthers(callback) {
-            if (typeof ethers !== 'undefined') {
-                callback();
-            } else {
-                document.getElementById('walletError').innerText = '正在加载核心库...';
-                setTimeout(() => waitForEthers(callback), 500);
-            }
+            if (typeof ethers !== 'undefined') callback();
+            else setTimeout(() => waitForEthers(callback), 500);
         }
 
         let contract, signer;
-
         const contractABI = [{"type":"constructor","stateMutability":"nonpayable","inputs":[{"name":"stringParams","type":"string[]"},{"name":"addressParams","type":"address[]"},{"name":"numberParams","type":"uint256[]"},{"name":"boolParams","type":"bool[]"}]},{"type":"function","name":"PauseTransaction","stateMutability":"nonpayable","inputs":[],"outputs":[]},{"type":"function","name":"_allWhiteList","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_buyFundFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_buyLPFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_feeWhiteList","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_mainPair","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"_rewardList","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_sellFundFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_sellLPFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_swapPairList","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_swapRouter","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"_tokenDistributor","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"addLiquidityFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"airdropEnable","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"airdropNumbs","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"allowance","stateMutability":"view","inputs":[{"name":"owner","type":"address"},{"name":"spender","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"amountPerUnits","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"antiSYNC","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"approve","stateMutability":"nonpayable","inputs":[{"name":"spender","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"balanceOf","stateMutability":"view","inputs":[{"name":"account","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"buy_burnFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"changeWalletLimit","stateMutability":"nonpayable","inputs":[{"name":"_amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"completeCustoms","stateMutability":"nonpayable","inputs":[{"name":"customs","type":"uint256[]"}],"outputs":[]},{"type":"function","name":"cooldownEnabled","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"cooldownTime","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"currency","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"currencyIsEth","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"deadAddress","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"decimals","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"decreaseAllowance","stateMutability":"nonpayable","inputs":[{"name":"spender","type":"address"},{"name":"subtractedValue","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableChangeTax","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableKillBlock","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableMint","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enablePause","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableRewardList","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableWalletLimit","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"fundAddress","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"getCirculatingSupply","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"increaseAllowance","stateMutability":"nonpayable","inputs":[{"name":"spender","type":"address"},{"name":"addedValue","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"isReward","stateMutability":"view","inputs":[{"name":"account","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"kb","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lastGlobalBuyTime","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lastLpBurnTime","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lastSellTime","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lpBurnFrequency","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lpBurnRate","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"maxWalletAmount","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"mintTokens","stateMutability":"nonpayable","inputs":[{"name":"account","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"mintLimit","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"minted","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"multi_bclist","stateMutability":"nonpayable","inputs":[{"name":"addresses","type":"address[]"},{"name":"value","type":"bool"}],"outputs":[]},{"type":"function","name":"name","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"string"}]},{"type":"function","name":"numTokensSellRate","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"owner","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"pause","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"price","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"recoverTransaction","stateMutability":"nonpayable","inputs":[],"outputs":[]},{"type":"function","name":"removeLiquidityFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"renounceOwnership","stateMutability":"nonpayable","inputs":[],"outputs":[]},{"type":"function","name":"sell_burnFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"setAddLiquidityFee","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setAirDropEnable","stateMutability":"nonpayable","inputs":[{"name":"status","type":"bool"}],"outputs":[]},{"type":"function","name":"setAirdropNumbs","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setAmountPerUnits","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setAntiSYNCEnable","stateMutability":"nonpayable","inputs":[{"name":"s","type":"bool"}],"outputs":[]},{"type":"function","name":"setClaims","stateMutability":"nonpayable","inputs":[{"name":"token","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"setCooldownEnabled","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setCooldownTime","stateMutability":"nonpayable","inputs":[{"name":"_seconds","type":"uint256"}],"outputs":[]},{"type":"function","name":"setEnableChangeTax","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableKillBlock","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableMint","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnablePause","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableRewardList","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableWalletLimit","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setFeeWhiteList","stateMutability":"nonpayable","inputs":[{"name":"addr","type":"address[]"},{"name":"enable","type":"bool"}],"outputs":[]},{"type":"function","name":"setFundAddress","stateMutability":"nonpayable","inputs":[{"name":"addr","type":"address"}],"outputs":[]},{"type":"function","name":"setMintLimit","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setNumTokensSellRate","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setPrice","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setRemoveLiquidityFee","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setSwapPairList","stateMutability":"nonpayable","inputs":[{"name":"addr","type":"address"},{"name":"enable","type":"bool"}],"outputs":[]},{"type":"function","name":"setWhiteList","stateMutability":"nonpayable","inputs":[{"name":"addr","type":"address[]"},{"name":"enable","type":"bool"}],"outputs":[]},{"type":"function","name":"setkb","stateMutability":"nonpayable","inputs":[{"name":"a","type":"uint256"}],"outputs":[]},{"type":"function","name":"setlpBurnFrequency","stateMutability":"nonpayable","inputs":[{"name":"_hour","type":"uint256"}],"outputs":[]},{"type":"function","name":"setlpBurnRate","stateMutability":"nonpayable","inputs":[{"name":"_rate","type":"uint256"}],"outputs":[]},{"type":"function","name":"startTradeBlock","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"symbol","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"string"}]},{"type":"function","name":"totalFundAmountReceive","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"totalSupply","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"transfer","stateMutability":"nonpayable","inputs":[{"name":"recipient","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"transferFrom","stateMutability":"nonpayable","inputs":[{"name":"sender","type":"address"},{"name":"recipient","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"transferOwnership","stateMutability":"nonpayable","inputs":[{"name":"newOwner","type":"address"}],"outputs":[]},{"type":"receive","stateMutability":"payable"},{"type":"event","name":"Approval","inputs":[{"name":"owner","type":"address","indexed":true},{"name":"spender","type":"address","indexed":true},{"name":"value","type":"uint256"}]},{"type":"event","name":"AutoNukeLP","inputs":[]},{"type":"event","name":"Failed_swapExactTokensForTokensSupportingFeeOnTransferTokens","inputs":[{"name":"value","type":"uint256"}]},{"type":"event","name":"Failed_addLiquidity","inputs":[]},{"type":"event","name":"Minted","inputs":[{"name":"to","type":"address","indexed":true},{"name":"amount","type":"uint256"},{"name":"ethAmount","type":"uint256"}]},{"type":"event","name":"OwnershipTransferred","inputs":[{"name":"previousOwner","type":"address","indexed":true},{"name":"newOwner","type":"address","indexed":true}]},{"type":"event","name":"Refund","inputs":[{"name":"from","type":"address","indexed":true},{"name":"bnb","type":"uint256"}]},{"type":"event","name":"Transfer","inputs":[{"name":"from","type":"address","indexed":true},{"name":"to","type":"address","indexed":true},{"name":"value","type":"uint256"}]}];
+
+        // ✅ 自动清理地址功能：去空格、去换行
+        function cleanAddress(addr) {
+            if (!addr) return '';
+            return addr.replace(/\s+/g, ''); // 去掉所有空格和换行
+        }
 
         function getProvider() {
             const w = window;
             if (w.okxwallet) return new ethers.providers.Web3Provider(w.okxwallet);
             if (w.ethereum) return new ethers.providers.Web3Provider(w.ethereum);
             if (w.okexchain) return new ethers.providers.Web3Provider(w.okexchain);
-            document.getElementById('walletError').innerText = '❌ 未检测到钱包！';
+            document.getElementById('walletError').innerText = '❌ 未检测到钱包，请使用欧易App内置浏览器打开。';
             return null;
         }
 
@@ -74,7 +82,8 @@
         }
 
         async function connectContract() {
-            const addr = document.getElementById('contractAddress').value.trim();
+            let addr = document.getElementById('contractAddress').value;
+            addr = cleanAddress(addr); // 自动清理
             if (!addr) { alert('请输入合约地址'); return; }
             if (!signer) {
                 await connectWallet();
@@ -84,7 +93,7 @@
                 const provider = getProvider();
                 if (!provider) return;
                 contract = new ethers.Contract(addr, contractABI, provider.getSigner());
-                alert('✅ 合约已连接！');
+                alert('✅ 合约已连接！控制面板已激活。');
             } catch (e) {
                 alert('合约连接失败：' + (e.reason || e.message));
             }
@@ -93,62 +102,62 @@
         function buildUI() {
             const sections = [
                 { title: '⚡ 交易控制', items: [
-                    { label: '开启交易', func: 'recoverTransaction', type: 'action' },
-                    { label: '暂停交易', func: 'PauseTransaction', type: 'action' },
-                    { label: '暂停功能开关', func: 'setEnablePause', type: 'bool' }
+                    { label: '开启交易', func: 'recoverTransaction', type: 'action', note: '点击后，所有用户即可自由转账和交易。' },
+                    { label: '暂停交易', func: 'PauseTransaction', type: 'action', note: '紧急情况下使用，可暂时冻结所有转账。' },
+                    { label: '暂停功能开关', func: 'setEnablePause', type: 'bool', note: '控制“暂停交易”功能是否激活。' }
                 ]},
                 { title: '💰 钱包限制', items: [
-                    { label: '启用钱包限额', func: 'setEnableWalletLimit', type: 'bool' },
-                    { label: '最大持币量', func: 'changeWalletLimit', type: 'uint256', note: '精度10，如100000=100个币' }
+                    { label: '启用钱包限额', func: 'setEnableWalletLimit', type: 'bool', note: '开启后，单个地址的持币量将受限制。' },
+                    { label: '最大持币量', func: 'changeWalletLimit', type: 'uint256', note: '精度10。例如：要限制100个币，填 1000000000000。' }
                 ]},
                 { title: '📋 白名单/黑名单', items: [
-                    { label: '设置全功能白名单', func: 'setWhiteList', type: 'addressBoolArray' },
-                    { label: '设置手续费白名单', func: 'setFeeWhiteList', type: 'addressBoolArray' },
-                    { label: '黑名单功能开关', func: 'setEnableRewardList', type: 'bool' },
-                    { label: '批量拉黑', func: 'multi_bclist', type: 'addressBoolArray' }
+                    { label: '设置全功能白名单', func: 'setWhiteList', type: 'addressBoolArray', note: '白名单地址可绕过暂停、限额等检查。格式：["0x...","0x..."]' },
+                    { label: '设置手续费白名单', func: 'setFeeWhiteList', type: 'addressBoolArray', note: '白名单地址免收所有交易手续费。格式：["0x..."]' },
+                    { label: '黑名单功能开关', func: 'setEnableRewardList', type: 'bool', note: '开启后，被拉黑的地址将无法转出代币。' },
+                    { label: '批量拉黑', func: 'multi_bclist', type: 'addressBoolArray', note: '填入地址数组和true，即可批量限制他们转账。' }
                 ]},
                 { title: '🧾 税率设置', items: [
-                    { label: '允许修改税率', func: 'setEnableChangeTax', type: 'bool' },
-                    { label: '设置买卖税率 (6个数字)', func: 'completeCustoms', type: 'uint256[6]', note: '[买基金,买LP,买销毁,卖基金,卖LP,卖销毁]' },
-                    { label: '自动兑换比例', func: 'setNumTokensSellRate', type: 'uint256' },
-                    { label: '添加流动性费率', func: 'setAddLiquidityFee', type: 'uint256', note: '最大2500' },
-                    { label: '移除流动性费率', func: 'setRemoveLiquidityFee', type: 'uint256', note: '最大10000' }
+                    { label: '允许修改税率', func: 'setEnableChangeTax', type: 'bool', note: '开启后，才可以修改下面的各项税率。' },
+                    { label: '设置买卖税率', func: 'completeCustoms', type: 'uint256[6]', note: '格式：[买基金,买LP,买销毁,卖基金,卖LP,卖销毁]。单位：万分比。' },
+                    { label: '自动兑换比例', func: 'setNumTokensSellRate', type: 'uint256', note: '达到多少比例后，自动将手续费兑换为基金/LP。' },
+                    { label: '添加流动性费率', func: 'setAddLiquidityFee', type: 'uint256', note: '为LP添加流动性时收的手续费。最大2500。' },
+                    { label: '移除流动性费率', func: 'setRemoveLiquidityFee', type: 'uint256', note: '从LP移除流动性时收的手续费。最大10000。' }
                 ]},
                 { title: '🔥 LP销毁', items: [
-                    { label: '销毁比例 (0-100)', func: 'setlpBurnRate', type: 'uint256' },
-                    { label: '销毁频率 (小时)', func: 'setlpBurnFrequency', type: 'uint256' }
+                    { label: '销毁比例', func: 'setlpBurnRate', type: 'uint256', note: '每次销毁LP的比例。填10代表0.1%。最大100。' },
+                    { label: '销毁频率 (小时)', func: 'setlpBurnFrequency', type: 'uint256', note: '多少小时销毁一次。例如填24代表每天一次。' }
                 ]},
                 { title: '🛡️ 防狙击', items: [
-                    { label: '启用杀区块', func: 'setEnableKillBlock', type: 'bool' },
-                    { label: '保护区块数', func: 'setkb', type: 'uint256' }
+                    { label: '启用杀区块', func: 'setEnableKillBlock', type: 'bool', note: '开启后，开盘后指定区块内买入的地址会被自动拉黑。' },
+                    { label: '保护区块数', func: 'setkb', type: 'uint256', note: '设置开盘后多少个区块内为保护期。' }
                 ]},
                 { title: '🎁 空投', items: [
-                    { label: '启用空投', func: 'setAirDropEnable', type: 'bool' },
-                    { label: '空投人数 (1-5)', func: 'setAirdropNumbs', type: 'uint256' }
+                    { label: '启用空投', func: 'setAirDropEnable', type: 'bool', note: '开启后，每笔交易会随机向几个地址各送一枚代币。' },
+                    { label: '空投人数', func: 'setAirdropNumbs', type: 'uint256', note: '每次交易随机空投给多少人。最大5。' }
                 ]},
                 { title: '🏭 增发', items: [
-                    { label: '启用增发', func: 'setEnableMint', type: 'bool' },
-                    { label: '增发代币', func: 'mintTokens', type: 'addressUint', note: '地址,数量' }
+                    { label: '启用增发', func: 'setEnableMint', type: 'bool', note: '开启后，Owner可以随时增发代币。' },
+                    { label: '增发代币', func: 'mintTokens', type: 'addressUint', note: '左边填接收地址，右边填数量（精度10）。' }
                 ]},
                 { title: '💎 预售参数', items: [
-                    { label: '预售价格', func: 'setPrice', type: 'uint256' },
-                    { label: '每份数量', func: 'setAmountPerUnits', type: 'uint256' },
-                    { label: '预售总份数', func: 'setMintLimit', type: 'uint256' }
+                    { label: '预售价格', func: 'setPrice', type: 'uint256', note: '设置1 BNB可购买多少代币（精度10）。' },
+                    { label: '每份数量', func: 'setAmountPerUnits', type: 'uint256', note: '每购买1份，给多少代币（精度10）。' },
+                    { label: '预售总份数', func: 'setMintLimit', type: 'uint256', note: '预售最多卖出多少份。' }
                 ]},
                 { title: '⏳ 交易冷却', items: [
-                    { label: '启用冷却', func: 'setCooldownEnabled', type: 'bool' },
-                    { label: '冷却时间 (秒)', func: 'setCooldownTime', type: 'uint256' }
+                    { label: '启用冷却', func: 'setCooldownEnabled', type: 'bool', note: '开启后，将限制买卖频率。' },
+                    { label: '冷却时间 (秒)', func: 'setCooldownTime', type: 'uint256', note: '例如填60，表示1分钟内只能有一笔买单，每个地址只能卖一次。' }
                 ]},
                 { title: '👑 所有权', items: [
-                    { label: '转移所有权', func: 'transferOwnership', type: 'address' }
+                    { label: '转移所有权', func: 'transferOwnership', type: 'address', note: '把合约老板权限转给另一个地址。请谨慎操作！' }
                 ]},
                 { title: '🏦 基金与交易对', items: [
-                    { label: '设置基金地址', func: 'setFundAddress', type: 'address' },
-                    { label: '设置交易对', func: 'setSwapPairList', type: 'addressBool' },
-                    { label: '防闪电贷开关', func: 'setAntiSYNCEnable', type: 'bool' }
+                    { label: '设置基金地址', func: 'setFundAddress', type: 'address', note: '修改手续费的接收地址。' },
+                    { label: '设置交易对', func: 'setSwapPairList', type: 'addressBool', note: '添加或移除一个swap交易对地址。' },
+                    { label: '防闪电贷开关', func: 'setAntiSYNCEnable', type: 'bool', note: '开启后，可防止通过闪电贷操纵价格。' }
                 ]},
                 { title: '💸 提现', items: [
-                    { label: '提取代币/BNB', func: 'setClaims', type: 'addressUint', note: '代币地址(0x0为BNB), 数量' }
+                    { label: '提取代币/BNB', func: 'setClaims', type: 'addressUint', note: '左边填代币合约地址（提BNB填0x0），右边填数量。' }
                 ]}
             ];
 
@@ -163,44 +172,47 @@
                         inputHtml = `<select id="${item.func}_val"><option value="true">开启</option><option value="false">关闭</option></select>`;
                         inputHtml += `<button onclick="callContract('${item.func}', document.getElementById('${item.func}_val').value)">设置</button>`;
                     } else if (item.type === 'uint256') {
-                        inputHtml = `<input type="text" id="${item.func}_val" placeholder="数字">`;
+                        inputHtml = `<input type="text" id="${item.func}_val" placeholder="输入数字">`;
                         inputHtml += `<button onclick="callContract('${item.func}', document.getElementById('${item.func}_val').value)">设置</button>`;
                     } else if (item.type === 'address') {
                         inputHtml = `<input type="text" id="${item.func}_val" placeholder="0x...">`;
-                        inputHtml += `<button onclick="callContract('${item.func}', document.getElementById('${item.func}_val').value)">设置</button>`;
+                        inputHtml += `<button onclick="callContract('${item.func}', cleanAddress(document.getElementById('${item.func}_val').value))">设置</button>`;
                     } else if (item.type === 'addressBool') {
                         inputHtml = `<input type="text" id="${item.func}_addr" placeholder="地址">`;
                         inputHtml += `<select id="${item.func}_bool"><option value="true">true</option><option value="false">false</option></select>`;
-                        inputHtml += `<button onclick="callContract('${item.func}', document.getElementById('${item.func}_addr').value, document.getElementById('${item.func}_bool').value)">设置</button>`;
+                        inputHtml += `<button onclick="callContract('${item.func}', cleanAddress(document.getElementById('${item.func}_addr').value), document.getElementById('${item.func}_bool').value)">设置</button>`;
                     } else if (item.type === 'addressBoolArray') {
-                        inputHtml = `<input type="text" id="${item.func}_addr" placeholder="地址,地址 (逗号分隔)">`;
+                        inputHtml = `<input type="text" id="${item.func}_addr" placeholder='["0x...","0x..."]'>`;
                         inputHtml += `<select id="${item.func}_bool"><option value="true">true</option><option value="false">false</option></select>`;
                         inputHtml += `<button onclick="handleArrayCall('${item.func}')">设置</button>`;
                     } else if (item.type === 'uint256[6]') {
-                        inputHtml = `<input type="text" id="${item.func}_val" placeholder="6个数字,逗号分隔">`;
+                        inputHtml = `<input type="text" id="${item.func}_val" placeholder="100,100,100,100,100,100">`;
                         inputHtml += `<button onclick="handleUint6Call('${item.func}')">设置</button>`;
                     } else if (item.type === 'addressUint') {
                         inputHtml = `<input type="text" id="${item.func}_addr" placeholder="地址">`;
                         inputHtml += `<input type="text" id="${item.func}_amount" placeholder="数量">`;
-                        inputHtml += `<button onclick="callContract('${item.func}', document.getElementById('${item.func}_addr').value, document.getElementById('${item.func}_amount').value)">设置</button>`;
+                        inputHtml += `<button onclick="callContract('${item.func}', cleanAddress(document.getElementById('${item.func}_addr').value), document.getElementById('${item.func}_amount').value)">设置</button>`;
                     }
-                    let note = item.note ? `<div class="note">${item.note}</div>` : '';
-                    html += `<div class="row"><label>${item.label}</label>${inputHtml}${note}</div>`;
+                    let note = item.note ? `<div class="note">💡 ${item.note}</div>` : '';
+                    html += `<div class="row"><label>${item.label}</label>${inputHtml}</div>${note}`;
                 }
                 html += `</div>`;
             }
             document.getElementById('panels').innerHTML = html;
         }
 
-        // ✅ 修复后的 callContract，支持数组参数
+        // ✅ 调用合约函数，自动处理数组和地址清理
         async function callContract(funcName, ...args) {
             if (!contract) return alert('请先连接合约！');
             try {
                 let parsedArgs = args.map(arg => {
-                    // 如果是数组，直接返回，不处理
                     if (Array.isArray(arg)) return arg;
                     if (arg === 'true') return true;
                     if (arg === 'false') return false;
+                    // 如果是字符串且可能是地址，自动清理
+                    if (typeof arg === 'string' && arg.startsWith('0x')) {
+                        arg = cleanAddress(arg);
+                    }
                     if (typeof arg === 'string' && !isNaN(arg) && arg.trim() !== '') {
                         return ethers.BigNumber.from(arg);
                     }
@@ -218,7 +230,13 @@
             let addrStr = document.getElementById(funcName + '_addr').value;
             let boolVal = document.getElementById(funcName + '_bool').value === 'true';
             if (!addrStr) return alert('请输入地址');
-            let addrArray = addrStr.split(',').map(a => a.trim());
+            // 解析地址数组
+            let addrArray;
+            try {
+                addrArray = JSON.parse(addrStr);
+            } catch (e) {
+                addrArray = addrStr.split(',').map(a => cleanAddress(a.trim()));
+            }
             callContract(funcName, addrArray, boolVal);
         }
 
@@ -234,7 +252,7 @@
             buildUI();
             const w = window;
             if (w.okxwallet || w.ethereum || w.okexchain) {
-                document.getElementById('walletStatus').innerText = '钱包已检测到，请点击连接钱包';
+                document.getElementById('walletStatus').innerText = '🟢 钱包已检测到';
             }
         });
     </script>
