@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🐼 熊猫代币 · 终极控制台</title>
+    <title>🐼 熊猫代币 · 终极控制台 V4</title>
     <script src="https://cdn.bootcdn.net/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -40,7 +40,6 @@
         <div id="walletError"></div>
     </div>
 
-    <!-- 信息查询区 -->
     <div class="section" id="infoSection" style="display:none;">
         <h2>🔍 信息查询</h2>
         <div class="row">
@@ -56,7 +55,6 @@
         <div id="pairInfo" class="info-box"></div>
     </div>
 
-    <!-- 参数设置区 -->
     <div id="panels"></div>
 
     <script>
@@ -67,7 +65,6 @@
 
         let contract, signer, mainPairAddress, decimals;
 
-        // 完整ABI，包含所有函数和事件
         const contractABI = [{"type":"constructor","stateMutability":"nonpayable","inputs":[{"name":"stringParams","type":"string[]"},{"name":"addressParams","type":"address[]"},{"name":"numberParams","type":"uint256[]"},{"name":"boolParams","type":"bool[]"}]},{"type":"function","name":"PauseTransaction","stateMutability":"nonpayable","inputs":[],"outputs":[]},{"type":"function","name":"_allWhiteList","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_buyFundFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_buyLPFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_feeWhiteList","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_mainPair","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"_rewardList","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_sellFundFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_sellLPFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_swapPairList","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_swapRouter","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"_tokenDistributor","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"addLiquidityFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"airdropEnable","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"airdropNumbs","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"allowance","stateMutability":"view","inputs":[{"name":"owner","type":"address"},{"name":"spender","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"amountPerUnits","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"antiSYNC","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"approve","stateMutability":"nonpayable","inputs":[{"name":"spender","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"balanceOf","stateMutability":"view","inputs":[{"name":"account","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"buy_burnFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"changeWalletLimit","stateMutability":"nonpayable","inputs":[{"name":"_amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"completeCustoms","stateMutability":"nonpayable","inputs":[{"name":"customs","type":"uint256[]"}],"outputs":[]},{"type":"function","name":"cooldownEnabled","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"cooldownTime","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"currency","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"currencyIsEth","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"deadAddress","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"decimals","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"decreaseAllowance","stateMutability":"nonpayable","inputs":[{"name":"spender","type":"address"},{"name":"subtractedValue","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableChangeTax","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableKillBlock","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableMint","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enablePause","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableRewardList","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableWalletLimit","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"fundAddress","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"getCirculatingSupply","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"increaseAllowance","stateMutability":"nonpayable","inputs":[{"name":"spender","type":"address"},{"name":"addedValue","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"isReward","stateMutability":"view","inputs":[{"name":"account","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"kb","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lastGlobalBuyTime","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lastLpBurnTime","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lastSellTime","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lpBurnFrequency","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lpBurnRate","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"maxWalletAmount","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"mintTokens","stateMutability":"nonpayable","inputs":[{"name":"account","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"mintLimit","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"minted","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"multi_bclist","stateMutability":"nonpayable","inputs":[{"name":"addresses","type":"address[]"},{"name":"value","type":"bool"}],"outputs":[]},{"type":"function","name":"name","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"string"}]},{"type":"function","name":"numTokensSellRate","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"owner","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"pause","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"price","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"recoverTransaction","stateMutability":"nonpayable","inputs":[],"outputs":[]},{"type":"function","name":"removeLiquidityFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"renounceOwnership","stateMutability":"nonpayable","inputs":[],"outputs":[]},{"type":"function","name":"sell_burnFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"setAddLiquidityFee","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setAirDropEnable","stateMutability":"nonpayable","inputs":[{"name":"status","type":"bool"}],"outputs":[]},{"type":"function","name":"setAirdropNumbs","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setAmountPerUnits","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setAntiSYNCEnable","stateMutability":"nonpayable","inputs":[{"name":"s","type":"bool"}],"outputs":[]},{"type":"function","name":"setClaims","stateMutability":"nonpayable","inputs":[{"name":"token","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"setCooldownEnabled","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setCooldownTime","stateMutability":"nonpayable","inputs":[{"name":"_seconds","type":"uint256"}],"outputs":[]},{"type":"function","name":"setEnableChangeTax","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableKillBlock","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableMint","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnablePause","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableRewardList","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableWalletLimit","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setFeeWhiteList","stateMutability":"nonpayable","inputs":[{"name":"addr","type":"address[]"},{"name":"enable","type":"bool"}],"outputs":[]},{"type":"function","name":"setFundAddress","stateMutability":"nonpayable","inputs":[{"name":"addr","type":"address"}],"outputs":[]},{"type":"function","name":"setMintLimit","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setNumTokensSellRate","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setPrice","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setRemoveLiquidityFee","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setSwapPairList","stateMutability":"nonpayable","inputs":[{"name":"addr","type":"address"},{"name":"enable","type":"bool"}],"outputs":[]},{"type":"function","name":"setWhiteList","stateMutability":"nonpayable","inputs":[{"name":"addr","type":"address[]"},{"name":"enable","type":"bool"}],"outputs":[]},{"type":"function","name":"setkb","stateMutability":"nonpayable","inputs":[{"name":"a","type":"uint256"}],"outputs":[]},{"type":"function","name":"setlpBurnFrequency","stateMutability":"nonpayable","inputs":[{"name":"_hour","type":"uint256"}],"outputs":[]},{"type":"function","name":"setlpBurnRate","stateMutability":"nonpayable","inputs":[{"name":"_rate","type":"uint256"}],"outputs":[]},{"type":"function","name":"startTradeBlock","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"symbol","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"string"}]},{"type":"function","name":"totalFundAmountReceive","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"totalSupply","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"transfer","stateMutability":"nonpayable","inputs":[{"name":"recipient","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"transferFrom","stateMutability":"nonpayable","inputs":[{"name":"sender","type":"address"},{"name":"recipient","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"transferOwnership","stateMutability":"nonpayable","inputs":[{"name":"newOwner","type":"address"}],"outputs":[]},{"type":"receive","stateMutability":"payable"},{"type":"event","name":"Approval","inputs":[{"name":"owner","type":"address","indexed":true},{"name":"spender","type":"address","indexed":true},{"name":"value","type":"uint256"}]},{"type":"event","name":"AutoNukeLP","inputs":[]},{"type":"event","name":"Failed_swapExactTokensForTokensSupportingFeeOnTransferTokens","inputs":[{"name":"value","type":"uint256"}]},{"type":"event","name":"Failed_addLiquidity","inputs":[]},{"type":"event","name":"Minted","inputs":[{"name":"to","type":"address","indexed":true},{"name":"amount","type":"uint256"},{"name":"ethAmount","type":"uint256"}]},{"type":"event","name":"OwnershipTransferred","inputs":[{"name":"previousOwner","type":"address","indexed":true},{"name":"newOwner","type":"address","indexed":true}]},{"type":"event","name":"Refund","inputs":[{"name":"from","type":"address","indexed":true},{"name":"bnb","type":"uint256"}]},{"type":"event","name":"Transfer","inputs":[{"name":"from","type":"address","indexed":true},{"name":"to","type":"address","indexed":true},{"name":"value","type":"uint256"}]}];
 
         function cleanAddress(addr) { return addr ? addr.replace(/\s+/g, '') : ''; }
@@ -112,7 +109,6 @@
             }
         }
 
-        // 加载所有静态参数的当前值
         async function loadCurrentValue(funcName, elementId) {
             if (!contract) return;
             try {
@@ -141,7 +137,6 @@
             });
         }
 
-        // 查询地址状态
         async function queryAddressStatus() {
             if (!contract) return alert('请先连接合约');
             let addr = cleanAddress(document.getElementById('queryAddress').value);
@@ -167,7 +162,6 @@
             }
         }
 
-        // 加载主交易对信息
         async function loadPairInfo() {
             if (!contract || !mainPairAddress) return;
             const pairABI = [
@@ -176,17 +170,17 @@
                 "function token1() external view returns (address)"
             ];
             try {
-                const pair = new ethers.Contract(mainPairAddress, pairABI, signer);
+                const provider = getProvider();
+                const pair = new ethers.Contract(mainPairAddress, pairABI, provider);
                 const [res0, res1, ts] = await pair.getReserves();
                 const token0 = await pair.token0();
                 const isToken0 = token0.toLowerCase() === contract.address.toLowerCase();
                 const tokenReserve = isToken0 ? res0 : res1;
                 const usdtReserve = isToken0 ? res1 : res0;
-                const usdtSymbol = 'USDT';
                 document.getElementById('pairInfo').innerHTML = `
                     <p>交易对地址：<span>${mainPairAddress}</span></p>
                     <p>CRC储备量：<span>${ethers.utils.formatUnits(tokenReserve, decimals)} CRC</span></p>
-                    <p>USDT储备量：<span>${ethers.utils.formatUnits(usdtReserve, 18)} ${usdtSymbol}</span></p>
+                    <p>USDT储备量：<span>${ethers.utils.formatUnits(usdtReserve, 18)} USDT</span></p>
                     <p>更新时间：<span>${new Date(ts * 1000).toLocaleString()}</span></p>
                 `;
             } catch (e) {
@@ -194,7 +188,67 @@
             }
         }
 
-        // 构建UI
+        // 核心执行函数，不弹窗，返回布尔值
+        async function _executeTx(funcName, ...args) {
+            if (!contract) { alert('请先连接合约'); return false; }
+            try {
+                let parsedArgs = args.map(arg => {
+                    if (Array.isArray(arg)) return arg;
+                    if (arg === 'true') return true;
+                    if (arg === 'false') return false;
+                    if (typeof arg === 'string' && arg.startsWith('0x')) arg = cleanAddress(arg);
+                    if (typeof arg === 'string' && !isNaN(arg) && arg.trim() !== '') return ethers.BigNumber.from(arg);
+                    return arg;
+                });
+                let tx = await contract[funcName](...parsedArgs);
+                await tx.wait();
+                return true;
+            } catch (e) {
+                alert('❌ 失败：' + (e.reason || e.message));
+                return false;
+            }
+        }
+
+        // 普通调用（带弹窗）
+        async function callContract(funcName, ...args) {
+            if (await _executeTx(funcName, ...args)) {
+                alert('✅ 交易成功！');
+            }
+        }
+
+        // 修改后自动刷新全部数值，并弹窗
+        async function callContractAndRefresh(funcName, ...args) {
+            if (await _executeTx(funcName, ...args)) {
+                loadAllCurrentValues();
+                if (funcName === 'setSwapPairList' || funcName === 'setFundAddress' || funcName === 'recoverTransaction' || funcName === 'PauseTransaction') {
+                    mainPairAddress = await contract._mainPair();
+                    loadPairInfo();
+                }
+                alert('✅ 设置成功，页面数值已自动更新。');
+            }
+        }
+
+        function handleArrayCall(funcName) {
+            let addrStr = document.getElementById(funcName + '_addr').value;
+            let boolVal = document.getElementById(funcName + '_bool').value === 'true';
+            if (!addrStr) return alert('请输入地址');
+            let addrArray;
+            try {
+                addrArray = JSON.parse(addrStr);
+            } catch (e) {
+                addrArray = addrStr.split(',').map(a => cleanAddress(a.trim()));
+            }
+            callContractAndRefresh(funcName, addrArray, boolVal);
+        }
+
+        function handleUint6Call(funcName) {
+            let valStr = document.getElementById(funcName + '_val').value;
+            if (!valStr) return alert('请输入6个数字');
+            let arr = valStr.split(',').map(v => ethers.BigNumber.from(v.trim()));
+            if (arr.length !== 6) return alert('必须输入6个数字');
+            callContractAndRefresh(funcName, arr);
+        }
+
         function buildUI() {
             const sections = [
                 { title: '⚡ 交易控制', items: [
@@ -253,7 +307,7 @@
                 ]},
                 { title: '🏦 基金与交易对', items: [
                     { label: '当前基金地址', func: 'fundAddress', type: 'viewOnly' },
-                    { label: '设置基金地址', func: 'setFundAddress', type: 'address' },
+                    { label: '设置基金地址', func: 'setFundAddress', type: 'address', viewFunc: 'fundAddress' },
                     { label: '设置交易对', func: 'setSwapPairList', type: 'addressBool' },
                     { label: '防闪电贷开关', func: 'setAntiSYNCEnable', type: 'bool', viewFunc: 'antiSYNC' }
                 ]},
@@ -280,17 +334,17 @@
                         inputHtml = `<button onclick="callContractAndRefresh('${item.func}')">执行</button>${currentSpan}`;
                     } else if (item.type === 'bool') {
                         inputHtml = `<select id="${item.func}_val"><option value="true">开启</option><option value="false">关闭</option></select>`;
-                        inputHtml += `<button onclick="callContractAndRefresh('${item.func}', document.getElementById('${item.func}_val').value, '${item.viewFunc}')">设置</button>${currentSpan}`;
+                        inputHtml += `<button onclick="callContractAndRefresh('${item.func}', document.getElementById('${item.func}_val').value)">设置</button>${currentSpan}`;
                     } else if (item.type === 'uint256') {
                         inputHtml = `<input type="text" id="${item.func}_val" placeholder="数字">`;
-                        inputHtml += `<button onclick="callContractAndRefresh('${item.func}', document.getElementById('${item.func}_val').value, '${item.viewFunc}')">设置</button>${currentSpan}`;
+                        inputHtml += `<button onclick="callContractAndRefresh('${item.func}', document.getElementById('${item.func}_val').value)">设置</button>${currentSpan}`;
                     } else if (item.type === 'address') {
                         inputHtml = `<textarea id="${item.func}_val" placeholder="0x..." rows="1"></textarea>`;
-                        inputHtml += `<button onclick="callContractAndRefresh('${item.func}', cleanAddress(document.getElementById('${item.func}_val').value), '${item.viewFunc}')">设置</button>${currentSpan}`;
+                        inputHtml += `<button onclick="callContractAndRefresh('${item.func}', cleanAddress(document.getElementById('${item.func}_val').value))">设置</button>${currentSpan}`;
                     } else if (item.type === 'addressBool') {
                         inputHtml = `<textarea id="${item.func}_addr" placeholder="地址" rows="1"></textarea>`;
                         inputHtml += `<select id="${item.func}_bool"><option value="true">true</option><option value="false">false</option></select>`;
-                        inputHtml += `<button onclick="callContract('${item.func}', cleanAddress(document.getElementById('${item.func}_addr').value), document.getElementById('${item.func}_bool').value)">设置</button>`;
+                        inputHtml += `<button onclick="callContractAndRefresh('${item.func}', cleanAddress(document.getElementById('${item.func}_addr').value), document.getElementById('${item.func}_bool').value)">设置</button>`;
                     } else if (item.type === 'addressBoolArray') {
                         inputHtml = `<textarea id="${item.func}_addr" placeholder='["0x...","0x..."] 或 逗号分隔' rows="2"></textarea>`;
                         inputHtml += `<select id="${item.func}_bool"><option value="true">true</option><option value="false">false</option></select>`;
@@ -301,7 +355,7 @@
                     } else if (item.type === 'addressUint') {
                         inputHtml = `<textarea id="${item.func}_addr" placeholder="地址" rows="1"></textarea>`;
                         inputHtml += `<input type="text" id="${item.func}_amount" placeholder="数量">`;
-                        inputHtml += `<button onclick="callContract('${item.func}', cleanAddress(document.getElementById('${item.func}_addr').value), document.getElementById('${item.func}_amount').value)">设置</button>`;
+                        inputHtml += `<button onclick="callContractAndRefresh('${item.func}', cleanAddress(document.getElementById('${item.func}_addr').value), document.getElementById('${item.func}_amount').value)">设置</button>`;
                     } else if (item.type === 'viewOnly' || item.type === 'viewOnlyGroup') {
                         inputHtml = `${currentSpan}`;
                     }
@@ -313,64 +367,9 @@
             document.getElementById('panels').innerHTML = html;
         }
 
-        async function callContract(funcName, ...args) {
-            if (!contract) return alert('请先连接合约！');
-            try {
-                let parsedArgs = args.map(arg => {
-                    if (Array.isArray(arg)) return arg;
-                    if (arg === 'true') return true;
-                    if (arg === 'false') return false;
-                    if (typeof arg === 'string' && arg.startsWith('0x')) arg = cleanAddress(arg);
-                    if (typeof arg === 'string' && !isNaN(arg) && arg.trim() !== '') return ethers.BigNumber.from(arg);
-                    return arg;
-                });
-                let tx = await contract[funcName](...parsedArgs);
-                await tx.wait();
-                return true;
-            } catch (e) {
-                alert('❌ 失败：' + (e.reason || e.message));
-                return false;
-            }
-        }
-
-        async function callContractAndRefresh(funcName, ...args) {
-            // 对于某些函数，我们想获取旧值，但简化处理，直接调用并刷新全部
-            if (await callContract(funcName, ...args)) {
-                loadAllCurrentValues();
-                // 如果修改了可能影响交易对的信息，也刷新一下
-                if (funcName === 'setSwapPairList' || funcName === 'setFundAddress') {
-                    mainPairAddress = await contract._mainPair();
-                    loadPairInfo();
-                }
-                alert('✅ 修改成功，数值已更新。');
-            }
-        }
-
-        function handleArrayCall(funcName) {
-            let addrStr = document.getElementById(funcName + '_addr').value;
-            let boolVal = document.getElementById(funcName + '_bool').value === 'true';
-            if (!addrStr) return alert('请输入地址');
-            let addrArray;
-            try {
-                addrArray = JSON.parse(addrStr);
-            } catch (e) {
-                addrArray = addrStr.split(',').map(a => cleanAddress(a.trim()));
-            }
-            callContract(funcName, addrArray, boolVal);
-        }
-
-        function handleUint6Call(funcName) {
-            let valStr = document.getElementById(funcName + '_val').value;
-            if (!valStr) return alert('请输入6个数字');
-            let arr = valStr.split(',').map(v => ethers.BigNumber.from(v.trim()));
-            if (arr.length !== 6) return alert('必须输入6个数字');
-            callContract(funcName, arr);
-        }
-
         waitForEthers(() => {
             buildUI();
-            const w = window;
-            if (w.okxwallet || w.ethereum) {
+            if (window.okxwallet || window.ethereum) {
                 document.getElementById('walletStatus').innerText = '🟢 钱包已检测到';
             }
         });
