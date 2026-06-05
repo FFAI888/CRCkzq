@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🐼 熊猫代币 · 全能看板 V6</title>
+    <title>🐼 熊猫代币 · 终极全能版 V7</title>
     <script src="https://cdn.bootcdn.net/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -25,13 +25,16 @@
         .info-box span { color: #f0a500; font-weight: bold; }
         .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .data-grid p { margin: 4px 0; font-size: 13px; }
+        .help-btn { background: #30363d; color: #c9d1d9; border: 1px solid #484f58; padding: 2px 8px; border-radius: 12px; font-size: 12px; cursor: pointer; margin-left: 5px; }
+        .help-text { background: #0d1117; border: 1px solid #30363d; padding: 8px; border-radius: 6px; font-size: 12px; color: #8b949e; margin-top: 5px; display: none; }
+        .help-text.show { display: block; }
         #walletStatus { color: #3fb950; margin-left: 10px; font-size: 13px; }
         #walletError { color: #f85149; font-size: 13px; margin-top: 5px; }
         .contract-input { width: 100%; padding: 10px; background: #0d1117; border: 1px solid #30363d; color: white; border-radius: 6px; margin-bottom: 12px; font-family: 'Courier New', monospace; }
     </style>
 </head>
 <body>
-    <h1>🐼 熊猫代币 · 全能数据看板 V6</h1>
+    <h1>🐼 熊猫代币 · 全能控制中心 V7</h1>
     <div class="section">
         <input type="text" class="contract-input" id="contractAddress" placeholder="代币合约地址 (0x...)">
         <div style="display:flex; align-items:center; flex-wrap:wrap;">
@@ -45,9 +48,7 @@
     <!-- 📊 只读数据看板（自动刷新） -->
     <div class="section" id="dashboardSection" style="display:none;">
         <h2>📊 实时数据看板 (每15秒自动刷新)</h2>
-        <div class="data-grid" id="dashboardGrid">
-            <!-- 由JS动态填充 -->
-        </div>
+        <div class="data-grid" id="dashboardGrid"></div>
         <div style="margin-top:12px; font-size:12px; color:#8b949e;">⏱️ 上次刷新：<span id="lastRefreshTime">-</span></div>
     </div>
 
@@ -70,24 +71,34 @@
     <div id="panels"></div>
 
     <script>
+        // -------------------- 初始化 --------------------
         function waitForEthers(callback) {
             if (typeof ethers !== 'undefined') callback();
             else setTimeout(() => waitForEthers(callback), 500);
         }
 
         let contract, signer, mainPairAddress, decimals;
+        const STORAGE_KEY = 'panda_contract_addr';
 
+        // ABI (完整版)
         const contractABI = [{"type":"constructor","stateMutability":"nonpayable","inputs":[{"name":"stringParams","type":"string[]"},{"name":"addressParams","type":"address[]"},{"name":"numberParams","type":"uint256[]"},{"name":"boolParams","type":"bool[]"}]},{"type":"function","name":"PauseTransaction","stateMutability":"nonpayable","inputs":[],"outputs":[]},{"type":"function","name":"_allWhiteList","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_buyFundFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_buyLPFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_feeWhiteList","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_mainPair","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"_rewardList","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_sellFundFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_sellLPFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_swapPairList","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_swapRouter","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"_tokenDistributor","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"addLiquidityFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"airdropEnable","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"airdropNumbs","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"allowance","stateMutability":"view","inputs":[{"name":"owner","type":"address"},{"name":"spender","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"amountPerUnits","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"antiSYNC","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"approve","stateMutability":"nonpayable","inputs":[{"name":"spender","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"balanceOf","stateMutability":"view","inputs":[{"name":"account","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"buy_burnFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"changeWalletLimit","stateMutability":"nonpayable","inputs":[{"name":"_amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"completeCustoms","stateMutability":"nonpayable","inputs":[{"name":"customs","type":"uint256[]"}],"outputs":[]},{"type":"function","name":"cooldownEnabled","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"cooldownTime","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"currency","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"currencyIsEth","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"deadAddress","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"decimals","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"decreaseAllowance","stateMutability":"nonpayable","inputs":[{"name":"spender","type":"address"},{"name":"subtractedValue","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableChangeTax","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableKillBlock","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableMint","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enablePause","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableRewardList","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableWalletLimit","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"fundAddress","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"getCirculatingSupply","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"increaseAllowance","stateMutability":"nonpayable","inputs":[{"name":"spender","type":"address"},{"name":"addedValue","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"isReward","stateMutability":"view","inputs":[{"name":"account","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"kb","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lastGlobalBuyTime","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lastLpBurnTime","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lastSellTime","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lpBurnFrequency","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lpBurnRate","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"maxWalletAmount","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"mintTokens","stateMutability":"nonpayable","inputs":[{"name":"account","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"mintLimit","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"minted","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"multi_bclist","stateMutability":"nonpayable","inputs":[{"name":"addresses","type":"address[]"},{"name":"value","type":"bool"}],"outputs":[]},{"type":"function","name":"name","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"string"}]},{"type":"function","name":"numTokensSellRate","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"owner","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"pause","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"price","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"recoverTransaction","stateMutability":"nonpayable","inputs":[],"outputs":[]},{"type":"function","name":"removeLiquidityFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"renounceOwnership","stateMutability":"nonpayable","inputs":[],"outputs":[]},{"type":"function","name":"sell_burnFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"setAddLiquidityFee","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setAirDropEnable","stateMutability":"nonpayable","inputs":[{"name":"status","type":"bool"}],"outputs":[]},{"type":"function","name":"setAirdropNumbs","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setAmountPerUnits","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setAntiSYNCEnable","stateMutability":"nonpayable","inputs":[{"name":"s","type":"bool"}],"outputs":[]},{"type":"function","name":"setClaims","stateMutability":"nonpayable","inputs":[{"name":"token","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"setCooldownEnabled","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setCooldownTime","stateMutability":"nonpayable","inputs":[{"name":"_seconds","type":"uint256"}],"outputs":[]},{"type":"function","name":"setEnableChangeTax","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableKillBlock","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableMint","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnablePause","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableRewardList","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableWalletLimit","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setFeeWhiteList","stateMutability":"nonpayable","inputs":[{"name":"addr","type":"address[]"},{"name":"enable","type":"bool"}],"outputs":[]},{"type":"function","name":"setFundAddress","stateMutability":"nonpayable","inputs":[{"name":"addr","type":"address"}],"outputs":[]},{"type":"function","name":"setMintLimit","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setNumTokensSellRate","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setPrice","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setRemoveLiquidityFee","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setSwapPairList","stateMutability":"nonpayable","inputs":[{"name":"addr","type":"address"},{"name":"enable","type":"bool"}],"outputs":[]},{"type":"function","name":"setWhiteList","stateMutability":"nonpayable","inputs":[{"name":"addr","type":"address[]"},{"name":"enable","type":"bool"}],"outputs":[]},{"type":"function","name":"setkb","stateMutability":"nonpayable","inputs":[{"name":"a","type":"uint256"}],"outputs":[]},{"type":"function","name":"setlpBurnFrequency","stateMutability":"nonpayable","inputs":[{"name":"_hour","type":"uint256"}],"outputs":[]},{"type":"function","name":"setlpBurnRate","stateMutability":"nonpayable","inputs":[{"name":"_rate","type":"uint256"}],"outputs":[]},{"type":"function","name":"startTradeBlock","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"symbol","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"string"}]},{"type":"function","name":"totalFundAmountReceive","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"totalSupply","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"transfer","stateMutability":"nonpayable","inputs":[{"name":"recipient","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"transferFrom","stateMutability":"nonpayable","inputs":[{"name":"sender","type":"address"},{"name":"recipient","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"transferOwnership","stateMutability":"nonpayable","inputs":[{"name":"newOwner","type":"address"}],"outputs":[]},{"type":"receive","stateMutability":"payable"},{"type":"event","name":"Approval","inputs":[{"name":"owner","type":"address","indexed":true},{"name":"spender","type":"address","indexed":true},{"name":"value","type":"uint256"}]},{"type":"event","name":"AutoNukeLP","inputs":[]},{"type":"event","name":"Failed_swapExactTokensForTokensSupportingFeeOnTransferTokens","inputs":[{"name":"value","type":"uint256"}]},{"type":"event","name":"Failed_addLiquidity","inputs":[]},{"type":"event","name":"Minted","inputs":[{"name":"to","type":"address","indexed":true},{"name":"amount","type":"uint256"},{"name":"ethAmount","type":"uint256"}]},{"type":"event","name":"OwnershipTransferred","inputs":[{"name":"previousOwner","type":"address","indexed":true},{"name":"newOwner","type":"address","indexed":true}]},{"type":"event","name":"Refund","inputs":[{"name":"from","type":"address","indexed":true},{"name":"bnb","type":"uint256"}]},{"type":"event","name":"Transfer","inputs":[{"name":"from","type":"address","indexed":true},{"name":"to","type":"address","indexed":true},{"name":"value","type":"uint256"}]}];
 
+        // 工具函数
         function cleanAddress(addr) { return addr ? addr.replace(/\s+/g, '') : ''; }
         function isValidAddress(addr) { return ethers.utils.isAddress(addr); }
-
         function getProvider() {
             const w = window;
             if (w.okxwallet) return new ethers.providers.Web3Provider(w.okxwallet);
             if (w.ethereum) return new ethers.providers.Web3Provider(w.ethereum);
             document.getElementById('walletError').innerText = '❌ 未检测到钱包，请使用欧易App内置浏览器打开。';
             return null;
+        }
+
+        // 自动保存和加载合约地址
+        function saveAddress(addr) { localStorage.setItem(STORAGE_KEY, addr); }
+        function loadAddress() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) document.getElementById('contractAddress').value = saved;
         }
 
         async function connectWallet() {
@@ -113,82 +124,53 @@
                 contract = new ethers.Contract(addr, contractABI, provider.getSigner());
                 decimals = await contract.decimals();
                 mainPairAddress = await contract._mainPair();
+                saveAddress(addr);
                 alert('✅ 合约已连接！');
                 document.getElementById('dashboardSection').style.display = 'block';
                 document.getElementById('infoSection').style.display = 'block';
                 refreshDashboard();
-                setInterval(refreshDashboard, 15000); // 15秒自动刷新
+                setInterval(refreshDashboard, 15000);
                 loadPairInfo();
             } catch (e) {
                 alert('合约连接失败：' + (e.reason || e.message));
             }
         }
 
-        // --- 数据看板核心 ---
+        // 数据看板
         async function refreshDashboard() {
             if (!contract) return;
             const dataPoints = [
-                { label: '代币名称', func: 'name' },
-                { label: '代币符号', func: 'symbol' },
-                { label: '精度', func: 'decimals' },
-                { label: '总供应量', func: 'totalSupply', format: 'amount' },
-                { label: '流通量', func: 'getCirculatingSupply', format: 'amount' },
-                { label: '最大持币限制', func: 'maxWalletAmount', format: 'amount' },
-                { label: '当前暂停状态', func: 'pause', format: 'bool' },
-                { label: '暂停功能启用', func: 'enablePause', format: 'bool' },
-                { label: '钱包限制启用', func: 'enableWalletLimit', format: 'bool' },
-                { label: '黑名单功能启用', func: 'enableRewardList', format: 'bool' },
-                { label: '杀区块启用', func: 'enableKillBlock', format: 'bool' },
-                { label: '保护区块数', func: 'kb' },
-                { label: '空投启用', func: 'airdropEnable', format: 'bool' },
-                { label: '空投人数', func: 'airdropNumbs' },
-                { label: '增发启用', func: 'enableMint', format: 'bool' },
-                { label: '税率可改', func: 'enableChangeTax', format: 'bool' },
-                { label: '自动兑换比例', func: 'numTokensSellRate', suffix: '%' },
-                { label: '买入: 基金费', func: '_buyFundFee', suffix: ' / 10000' },
-                { label: '买入: LP费', func: '_buyLPFee', suffix: ' / 10000' },
-                { label: '买入: 销毁费', func: 'buy_burnFee', suffix: ' / 10000' },
-                { label: '卖出: 基金费', func: '_sellFundFee', suffix: ' / 10000' },
-                { label: '卖出: LP费', func: '_sellLPFee', suffix: ' / 10000' },
-                { label: '卖出: 销毁费', func: 'sell_burnFee', suffix: ' / 10000' },
-                { label: '添加流动性费', func: 'addLiquidityFee', suffix: ' / 10000' },
-                { label: '移除流动性费', func: 'removeLiquidityFee', suffix: ' / 10000' },
-                { label: 'LP销毁比例', func: 'lpBurnRate', suffix: ' (万分比)' },
-                { label: 'LP销毁频率', func: 'lpBurnFrequency', suffix: ' 秒' },
-                { label: '冷却启用', func: 'cooldownEnabled', format: 'bool' },
-                { label: '冷却时间', func: 'cooldownTime', suffix: ' 秒' },
-                { label: '预售价格', func: 'price', format: 'amount' },
-                { label: '预售每份数量', func: 'amountPerUnits', format: 'amount' },
-                { label: '预售已售份数', func: 'minted' },
-                { label: '预售总份数', func: 'mintLimit' },
-                { label: '合约所有者', func: 'owner', format: 'address' },
-                { label: '基金地址', func: 'fundAddress', format: 'address' },
-                { label: '累积基金收入', func: 'totalFundAmountReceive', format: 'amount' },
-                { label: '交易启动区块', func: 'startTradeBlock' },
-                { label: '上次LP销毁时间', func: 'lastLpBurnTime', format: 'timestamp' },
-                { label: '上次全局买单时间', func: 'lastGlobalBuyTime', format: 'timestamp' },
-                { label: '主交易对', func: '_mainPair', format: 'address' },
-                { label: '防闪电贷', func: 'antiSYNC', format: 'bool' },
-                { label: '基础货币', func: 'currency', format: 'address' },
-                { label: '是否原生币', func: 'currencyIsEth', format: 'bool' },
+                { label: '名称', func: 'name' }, { label: '符号', func: 'symbol' }, { label: '精度', func: 'decimals' },
+                { label: '总供应量', func: 'totalSupply', format: 'amount' }, { label: '流通量', func: 'getCirculatingSupply', format: 'amount' },
+                { label: '最大钱包限制', func: 'maxWalletAmount', format: 'amount' }, { label: '暂停状态', func: 'pause', format: 'bool' },
+                { label: '暂停功能', func: 'enablePause', format: 'bool' }, { label: '限额功能', func: 'enableWalletLimit', format: 'bool' },
+                { label: '黑名单功能', func: 'enableRewardList', format: 'bool' }, { label: '杀区块功能', func: 'enableKillBlock', format: 'bool' },
+                { label: '保护区块数', func: 'kb' }, { label: '空投功能', func: 'airdropEnable', format: 'bool' }, { label: '空投人数', func: 'airdropNumbs' },
+                { label: '增发功能', func: 'enableMint', format: 'bool' }, { label: '可改税率', func: 'enableChangeTax', format: 'bool' },
+                { label: '自动兑换率', func: 'numTokensSellRate', suffix: '%' },
+                { label: '买:基金', func: '_buyFundFee', suffix: '/10000' }, { label: '买:LP', func: '_buyLPFee', suffix: '/10000' }, { label: '买:销毁', func: 'buy_burnFee', suffix: '/10000' },
+                { label: '卖:基金', func: '_sellFundFee', suffix: '/10000' }, { label: '卖:LP', func: '_sellLPFee', suffix: '/10000' }, { label: '卖:销毁', func: 'sell_burnFee', suffix: '/10000' },
+                { label: '添加LP费', func: 'addLiquidityFee', suffix: '/10000' }, { label: '移除LP费', func: 'removeLiquidityFee', suffix: '/10000' },
+                { label: 'LP销毁率', func: 'lpBurnRate', suffix: '/10000' }, { label: 'LP销毁间隔', func: 'lpBurnFrequency', suffix: '秒' },
+                { label: '冷却启用', func: 'cooldownEnabled', format: 'bool' }, { label: '冷却时间', func: 'cooldownTime', suffix: '秒' },
+                { label: '预售价格', func: 'price', format: 'amount' }, { label: '预售份量', func: 'amountPerUnits', format: 'amount' },
+                { label: '预售已售', func: 'minted' }, { label: '预售总量', func: 'mintLimit' },
+                { label: 'Owner', func: 'owner', format: 'address' }, { label: '基金地址', func: 'fundAddress', format: 'address' },
+                { label: '累积基金', func: 'totalFundAmountReceive', format: 'amount' }, { label: '启动区块', func: 'startTradeBlock' },
+                { label: '上次LP烧', func: 'lastLpBurnTime', format: 'timestamp' }, { label: '上次全局买', func: 'lastGlobalBuyTime', format: 'timestamp' },
+                { label: '主交易对', func: '_mainPair', format: 'address' }, { label: '防闪电贷', func: 'antiSYNC', format: 'bool' },
+                { label: '基础货币', func: 'currency', format: 'address' }, { label: '是否原生币', func: 'currencyIsEth', format: 'bool' }
             ];
-
             let html = '';
             for (let dp of dataPoints) {
                 try {
                     let raw = await contract[dp.func]();
                     let display;
-                    if (dp.format === 'bool') {
-                        display = raw ? '✅' : '❌';
-                    } else if (dp.format === 'address') {
-                        display = raw.length > 10 ? raw.slice(0,6)+'...'+raw.slice(-4) : raw;
-                    } else if (dp.format === 'amount') {
-                        display = ethers.utils.formatUnits(raw, decimals);
-                    } else if (dp.format === 'timestamp') {
-                        display = raw.toString() === '0' ? '从未' : new Date(raw.toNumber() * 1000).toLocaleString();
-                    } else {
-                        display = raw.toString();
-                    }
+                    if (dp.format === 'bool') display = raw ? '✅' : '❌';
+                    else if (dp.format === 'address') display = raw.length > 10 ? raw.slice(0,6)+'...'+raw.slice(-4) : raw;
+                    else if (dp.format === 'amount') display = ethers.utils.formatUnits(raw, decimals);
+                    else if (dp.format === 'timestamp') display = raw.toString() === '0' ? '从未' : new Date(raw.toNumber() * 1000).toLocaleString();
+                    else display = raw.toString();
                     if (dp.suffix) display += dp.suffix;
                     html += `<p><strong>${dp.label}</strong> <span>${display}</span></p>`;
                 } catch (e) {
@@ -199,7 +181,6 @@
             document.getElementById('lastRefreshTime').innerText = new Date().toLocaleTimeString();
         }
 
-        // --- 地址查询、交易对 ---
         async function queryAddressStatus() {
             if (!contract) return alert('请先连接合约');
             let addr = cleanAddress(document.getElementById('queryAddress').value);
@@ -220,9 +201,7 @@
                 `;
                 document.getElementById('queryResult').innerHTML = resultHtml;
                 document.getElementById('queryResult').style.display = 'block';
-            } catch (e) {
-                alert('查询失败：' + e.message);
-            }
+            } catch (e) { alert('查询失败：' + e.message); }
         }
 
         async function loadPairInfo() {
@@ -242,16 +221,14 @@
                 const usdtReserve = isToken0 ? res1 : res0;
                 document.getElementById('pairInfo').innerHTML = `
                     <p>交易对地址：<span>${mainPairAddress}</span></p>
-                    <p>CRC储备量：<span>${ethers.utils.formatUnits(tokenReserve, decimals)} CRC</span></p>
-                    <p>USDT储备量：<span>${ethers.utils.formatUnits(usdtReserve, 18)} USDT</span></p>
+                    <p>CRC储备：<span>${ethers.utils.formatUnits(tokenReserve, decimals)} CRC</span></p>
+                    <p>USDT储备：<span>${ethers.utils.formatUnits(usdtReserve, 18)} USDT</span></p>
                     <p>更新时间：<span>${new Date(ts * 1000).toLocaleString()}</span></p>
                 `;
-            } catch (e) {
-                document.getElementById('pairInfo').innerHTML = `<p style="color:#f85149;">获取失败：${e.message}</p>`;
-            }
+            } catch (e) { document.getElementById('pairInfo').innerHTML = `<p style="color:#f85149;">获取失败：${e.message}</p>`; }
         }
 
-        // --- 交易与设置（沿用V5稳定逻辑）---
+        // 交易核心
         async function _sendTransaction(funcName, argsArray) {
             if (!contract) { alert('请先连接合约'); return false; }
             try {
@@ -306,71 +283,79 @@
             executeAndRefresh(funcName, arr);
         }
 
+        // 帮助说明切换
+        function toggleHelp(id) {
+            const el = document.getElementById(id);
+            el.classList.toggle('show');
+        }
+
+        // 构建UI，每个功能带有说明
         function buildUI() {
             const sections = [
-                { title: '⚡ 交易控制', items: [
-                    { label: '开启交易', func: 'recoverTransaction', type: 'action' },
-                    { label: '暂停交易', func: 'PauseTransaction', type: 'action' },
-                    { label: '暂停功能开关', func: 'setEnablePause', type: 'bool' }
+                { title: '⚡ 交易控制', help: '控制所有转账行为的开关。开启交易后，普通用户才能转账和交易。', items: [
+                    { label: '开启交易', func: 'recoverTransaction', type: 'action', help: '调用后立即将合约的暂停标志设为 false，允许所有转账。如果尚未记录启动区块，会同时记录当前区块号，并初始化 LP 销毁时间。' },
+                    { label: '暂停交易', func: 'PauseTransaction', type: 'action', help: '调用后立即将合约的暂停标志设为 true，所有普通转账将被阻止（白名单除外）。' },
+                    { label: '暂停功能开关', func: 'setEnablePause', type: 'bool', help: '控制暂停功能是否激活。如果关闭，则“暂停交易”按钮无效，任何人都无法再暂停交易。参数：true=激活，false=关闭。' }
                 ]},
-                { title: '💰 钱包限制', items: [
-                    { label: '启用钱包限额', func: 'setEnableWalletLimit', type: 'bool' },
-                    { label: '最大持币量', func: 'changeWalletLimit', type: 'uint256' }
+                { title: '💰 钱包限制', help: '限制单个地址最多能持有多少代币。防止大户集中持仓。', items: [
+                    { label: '启用钱包限额', func: 'setEnableWalletLimit', type: 'bool', help: '开启后，转账时会检查接收地址的余额是否超过最大持币量。参数：true=开启，false=关闭。' },
+                    { label: '最大持币量', func: 'changeWalletLimit', type: 'uint256', help: '设置单个地址允许持有的最大代币数量（精度10，例如100个币=1000000000000）。仅当钱包限额功能启用时生效。' }
                 ]},
-                { title: '📋 白名单/黑名单', items: [
-                    { label: '全功能白名单', func: 'setWhiteList', type: 'addressBoolArray' },
-                    { label: '手续费白名单', func: 'setFeeWhiteList', type: 'addressBoolArray' },
-                    { label: '黑名单功能开关', func: 'setEnableRewardList', type: 'bool' },
-                    { label: '批量拉黑', func: 'multi_bclist', type: 'addressBoolArray' }
+                { title: '📋 白名单/黑名单', help: '管理特殊地址的权限。白名单地址可以绕过暂停、限额等检查；黑名单地址被禁止转账。', items: [
+                    { label: '全功能白名单', func: 'setWhiteList', type: 'addressBoolArray', help: '将一批地址加入或移出“超级白名单”。这些地址可以无视暂停、限额等限制。参数：地址数组+true/false。' },
+                    { label: '手续费白名单', func: 'setFeeWhiteList', type: 'addressBoolArray', help: '将一批地址加入或移出“手续费白名单”。这些地址交易时免收任何手续费。参数同全功能白名单。' },
+                    { label: '黑名单功能开关', func: 'setEnableRewardList', type: 'bool', help: '开启后，被加入“奖励名单”（实际是黑名单）的地址将无法转出代币。参数：true=开启，false=关闭。' },
+                    { label: '批量拉黑', func: 'multi_bclist', type: 'addressBoolArray', help: '将一批地址加入或移出黑名单。参数：地址数组+true（拉黑）或false（解除）。每次最多200个地址。' }
                 ]},
-                { title: '🧾 税率设置', items: [
-                    { label: '允许修改税率', func: 'setEnableChangeTax', type: 'bool' },
-                    { label: '修改买卖税率', func: 'completeCustoms', type: 'uint256[6]', note: '买基金,买LP,买销毁,卖基金,卖LP,卖销毁' },
-                    { label: '自动兑换比例', func: 'setNumTokensSellRate', type: 'uint256' },
-                    { label: '添加流动性费率', func: 'setAddLiquidityFee', type: 'uint256' },
-                    { label: '移除流动性费率', func: 'setRemoveLiquidityFee', type: 'uint256' }
+                { title: '🧾 税率设置', help: '配置买卖交易时的手续费比例。手续费分为三部分：基金、流动性、销毁。所有费率单位均为万分比（/10000）。', items: [
+                    { label: '允许修改税率', func: 'setEnableChangeTax', type: 'bool', help: '开启后，才可以修改下面的税率。关闭后税率永久锁定。参数：true=允许修改，false=锁定。' },
+                    { label: '修改买卖税率', func: 'completeCustoms', type: 'uint256[6]', help: '一次性设置买入和卖出的六项税率。顺序：[买入基金, 买入LP, 买入销毁, 卖出基金, 卖出LP, 卖出销毁]。每个数字都是万分比，例如100代表1%。买入三者和卖出三者都必须<2500。' },
+                    { label: '自动兑换比例', func: 'setNumTokensSellRate', type: 'uint256', help: '设置触发自动将手续费兑换为基金/LP的比例。例如填20，表示当累积到一定数量时，会将20%的手续费代币卖出。' },
+                    { label: '添加流动性费率', func: 'setAddLiquidityFee', type: 'uint256', help: '当用户向主交易对添加流动性时，额外收取的手续费比例（万分比）。最大2500。' },
+                    { label: '移除流动性费率', func: 'setRemoveLiquidityFee', type: 'uint256', help: '当用户从主交易对移除流动性时，额外收取的手续费比例（万分比）。最大10000。' }
                 ]},
-                { title: '🔥 LP销毁', items: [
-                    { label: '销毁比例', func: 'setlpBurnRate', type: 'uint256' },
-                    { label: '销毁频率(小时)', func: 'setlpBurnFrequency', type: 'uint256' }
+                { title: '🔥 LP销毁', help: '自动销毁交易对中的 LP 代币，从而永久锁定流动性，制造通缩。', items: [
+                    { label: '销毁比例', func: 'setlpBurnRate', type: 'uint256', help: '每次销毁时，销毁多少比例的 LP 代币。单位是万分比，例如10代表0.1%。最大100（即1%）。' },
+                    { label: '销毁频率(小时)', func: 'setlpBurnFrequency', type: 'uint256', help: '设置多少小时执行一次 LP 销毁。例如24代表每天一次。注意：合约内部会转换为秒。' }
                 ]},
-                { title: '🛡️ 防狙击', items: [
-                    { label: '启用杀区块', func: 'setEnableKillBlock', type: 'bool' },
-                    { label: '保护区块数', func: 'setkb', type: 'uint256' }
+                { title: '🛡️ 防狙击', help: '在开盘初期保护代币，自动将早期买入者拉黑。', items: [
+                    { label: '启用杀区块', func: 'setEnableKillBlock', type: 'bool', help: '开启后，在开盘后指定区块数内买入的地址会被自动加入黑名单。参数：true=开启，false=关闭。' },
+                    { label: '保护区块数', func: 'setkb', type: 'uint256', help: '设置开盘后多少个区块为保护期。在此期间买入的地址会被拉黑。' }
                 ]},
-                { title: '🎁 空投', items: [
-                    { label: '启用空投', func: 'setAirDropEnable', type: 'bool' },
-                    { label: '空投人数', func: 'setAirdropNumbs', type: 'uint256' }
+                { title: '🎁 空投', help: '每次交易时随机向几个地址发送小额代币。', items: [
+                    { label: '启用空投', func: 'setAirDropEnable', type: 'bool', help: '开启或关闭交易空投功能。' },
+                    { label: '空投人数', func: 'setAirdropNumbs', type: 'uint256', help: '每次交易随机空投给多少个地址。最大5。' }
                 ]},
-                { title: '🏭 增发', items: [
-                    { label: '启用增发', func: 'setEnableMint', type: 'bool' },
-                    { label: '增发代币', func: 'mintTokens', type: 'addressUint' }
+                { title: '🏭 增发', help: '允许合约 Owner 铸造新的代币。', items: [
+                    { label: '启用增发', func: 'setEnableMint', type: 'bool', help: '开启后，Owner 可以调用增发函数。参数：true=允许，false=禁止。' },
+                    { label: '增发代币', func: 'mintTokens', type: 'addressUint', help: '给指定地址铸造新代币。参数：接收地址 + 数量（精度10）。总供应量会增加。' }
                 ]},
-                { title: '💎 预售参数', items: [
-                    { label: '预售价格', func: 'setPrice', type: 'uint256' },
-                    { label: '每份数量', func: 'setAmountPerUnits', type: 'uint256' },
-                    { label: '预售总份数', func: 'setMintLimit', type: 'uint256' }
+                { title: '💎 预售参数', help: '配置通过合约直接购买代币（预售）的价格和数量。', items: [
+                    { label: '预售价格', func: 'setPrice', type: 'uint256', help: '设置 1 BNB 可以购买多少代币（精度10）。例如 1000 个币需带10个零。' },
+                    { label: '每份数量', func: 'setAmountPerUnits', type: 'uint256', help: '每购买一份（1 BNB）给多少代币。通常应等于预售价格。' },
+                    { label: '预售总份数', func: 'setMintLimit', type: 'uint256', help: '预售最多卖出多少份。' }
                 ]},
-                { title: '⏳ 交易冷却', items: [
-                    { label: '启用冷却', func: 'setCooldownEnabled', type: 'bool' },
-                    { label: '冷却时间(秒)', func: 'setCooldownTime', type: 'uint256' }
+                { title: '⏳ 交易冷却', help: '限制买卖频率，防止机器人高频交易。', items: [
+                    { label: '启用冷却', func: 'setCooldownEnabled', type: 'bool', help: '开启或关闭交易冷却功能。' },
+                    { label: '冷却时间(秒)', func: 'setCooldownTime', type: 'uint256', help: '设置冷却时间。例如 60 表示一分钟内只能有一笔全局买单，每个地址只能有一笔卖单。' }
                 ]},
-                { title: '👑 所有权', items: [
-                    { label: '转移所有权', func: 'transferOwnership', type: 'address' }
+                { title: '👑 所有权', help: '管理合约的最高权限（Owner）。只有 Owner 能修改参数。', items: [
+                    { label: '转移所有权', func: 'transferOwnership', type: 'address', help: '将合约 Owner 权限转交给另一个地址。请务必填写正确的钱包地址，一旦转移无法撤销。' }
                 ]},
-                { title: '🏦 基金与交易对', items: [
-                    { label: '设置基金地址', func: 'setFundAddress', type: 'address' },
-                    { label: '设置交易对', func: 'setSwapPairList', type: 'addressBool' },
-                    { label: '防闪电贷开关', func: 'setAntiSYNCEnable', type: 'bool' }
+                { title: '🏦 基金与交易对', help: '管理手续费接收地址和交易对注册。', items: [
+                    { label: '设置基金地址', func: 'setFundAddress', type: 'address', help: '修改手续费的接收地址。该地址会自动加入手续费白名单。' },
+                    { label: '设置交易对', func: 'setSwapPairList', type: 'addressBool', help: '将一个地址标记为交易对（或取消标记）。标记后，该地址的转账会触发手续费。' },
+                    { label: '防闪电贷开关', func: 'setAntiSYNCEnable', type: 'bool', help: '开启后，禁止通过闪电贷在同一笔交易中查询余额并操纵价格。' }
                 ]},
-                { title: '💸 提现', items: [
-                    { label: '提取代币/BNB', func: 'setClaims', type: 'addressUint', note: '代币地址(0x0为BNB) + 数量' }
+                { title: '💸 提现', help: '提取合约中锁定的代币或 BNB。', items: [
+                    { label: '提取代币/BNB', func: 'setClaims', type: 'addressUint', help: '提取合约内的资产。代币地址：填代币合约地址；如果要提取 BNB，填 0x0000000000000000000000000000000000000000。数量为提取金额（代币按精度）。' }
                 ]}
             ];
 
             let html = '';
             for (let sec of sections) {
-                html += `<div class="section"><h2>${sec.title}</h2>`;
+                html += `<div class="section"><h2>${sec.title} <button class="help-btn" onclick="toggleHelp('help_${sec.title}')">📖 说明</button></h2>`;
+                html += `<div id="help_${sec.title}" class="help-text">${sec.help}</div>`;
                 for (let item of sec.items) {
                     let inputHtml = '';
                     if (item.type === 'action') {
@@ -400,19 +385,19 @@
                         inputHtml += `<input type="text" id="${item.func}_amount" placeholder="数量">`;
                         inputHtml += `<button onclick="executeAndRefresh('${item.func}', document.getElementById('${item.func}_addr').value, document.getElementById('${item.func}_amount').value)">设置</button>`;
                     }
-                    let note = item.note ? `<div class="note">💡 ${item.note}</div>` : '';
-                    html += `<div class="row"><label>${item.label}</label>${inputHtml}</div>${note}`;
+                    html += `<div class="row"><label>${item.label}</label>${inputHtml} <button class="help-btn" onclick="toggleHelp('help_${item.func}')">📖</button></div>`;
+                    html += `<div id="help_${item.func}" class="help-text">${item.help}</div>`;
                 }
                 html += `</div>`;
             }
             document.getElementById('panels').innerHTML = html;
         }
 
+        // 初始化
         waitForEthers(() => {
+            loadAddress();
             buildUI();
-            if (window.okxwallet || window.ethereum) {
-                document.getElementById('walletStatus').innerText = '🟢 钱包已检测到';
-            }
+            if (window.okxwallet || window.ethereum) document.getElementById('walletStatus').innerText = '🟢 钱包已检测到';
         });
     </script>
 </body>
