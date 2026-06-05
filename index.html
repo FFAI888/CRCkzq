@@ -4,7 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>🐼 熊猫代币管理</title>
+    <!-- 使用多个备用 CDN，保证库能加载 -->
     <script src="https://cdn.bootcdn.net/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <script>
+        // 如果 5 秒后 ethers 还没加载，尝试官方源
+        setTimeout(() => {
+            if (typeof ethers === 'undefined') {
+                var script = document.createElement('script');
+                script.src = 'https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js';
+                document.head.appendChild(script);
+            }
+        }, 5000);
+    </script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #1a1a2e; color: #eee; padding: 15px; max-width: 600px; margin: auto; }
@@ -20,63 +31,94 @@
         button:hover { background: #ffc300; }
         .note { font-size: 12px; color: #aaa; margin-top: 3px; flex-basis: 100%; }
         .status { color: #4ecca3; font-size: 14px; margin-left: 5px; }
+        .error { color: #ff6b6b; }
+        #walletStatus { color: #ff6b6b; }
     </style>
 </head>
 <body>
     <h1>🐼 熊猫代币 - 中文控制面板</h1>
     <div class="section">
         <label>合约地址</label>
-        <input type="text" id="contractAddress" placeholder="0x..." style="width: 100%;">
-        <div class="row" style="margin-top: 10px;">
+        <input type="text" id="contractAddress" placeholder="0x..." style="width: 100%; margin-bottom:10px;">
+        <div class="row">
             <button onclick="connectContract()">连接合约</button>
             <button onclick="connectWallet()">连接钱包</button>
             <span id="walletStatus" class="status">未连接</span>
         </div>
+        <div id="walletError" class="error" style="margin-top:8px;"></div>
     </div>
     <div id="panels"></div>
 
     <script>
+        // 等待 ethers 加载
+        function waitForEthers(callback) {
+            if (typeof ethers !== 'undefined') {
+                callback();
+            } else {
+                document.getElementById('walletError').innerText = '正在加载核心库，请稍后重试...';
+                setTimeout(() => waitForEthers(callback), 500);
+            }
+        }
+
         let contract, signer;
+
         const contractABI = [{"type":"constructor","inputs":[{"name":"stringParams","type":"string[]"},{"name":"addressParams","type":"address[]"},{"name":"numberParams","type":"uint256[]"},{"name":"boolParams","type":"bool[]"}]},{"type":"function","name":"PauseTransaction","inputs":[],"outputs":[]},{"type":"function","name":"_allWhiteList","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_buyFundFee","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_buyLPFee","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_feeWhiteList","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_mainPair","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"_rewardList","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_sellFundFee","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_sellLPFee","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_swapPairList","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_swapRouter","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"_tokenDistributor","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"addLiquidityFee","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"airdropEnable","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"airdropNumbs","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"allowance","inputs":[{"name":"owner","type":"address"},{"name":"spender","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"amountPerUnits","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"antiSYNC","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"approve","inputs":[{"name":"spender","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"balanceOf","inputs":[{"name":"account","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"buy_burnFee","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"changeWalletLimit","inputs":[{"name":"_amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"completeCustoms","inputs":[{"name":"customs","type":"uint256[]"}],"outputs":[]},{"type":"function","name":"cooldownEnabled","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"cooldownTime","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"currency","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"currencyIsEth","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"deadAddress","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"decimals","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"decreaseAllowance","inputs":[{"name":"spender","type":"address"},{"name":"subtractedValue","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableChangeTax","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableKillBlock","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableMint","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enablePause","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableRewardList","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableWalletLimit","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"fundAddress","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"getCirculatingSupply","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"increaseAllowance","inputs":[{"name":"spender","type":"address"},{"name":"addedValue","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"isReward","inputs":[{"name":"account","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"kb","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lastGlobalBuyTime","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lastLpBurnTime","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lastSellTime","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lpBurnFrequency","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lpBurnRate","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"maxWalletAmount","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"mintTokens","inputs":[{"name":"account","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"mintLimit","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"minted","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"multi_bclist","inputs":[{"name":"addresses","type":"address[]"},{"name":"value","type":"bool"}],"outputs":[]},{"type":"function","name":"name","inputs":[],"outputs":[{"name":"","type":"string"}]},{"type":"function","name":"numTokensSellRate","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"owner","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"pause","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"price","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"recoverTransaction","inputs":[],"outputs":[]},{"type":"function","name":"removeLiquidityFee","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"renounceOwnership","inputs":[],"outputs":[]},{"type":"function","name":"sell_burnFee","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"setAddLiquidityFee","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setAirDropEnable","inputs":[{"name":"status","type":"bool"}],"outputs":[]},{"type":"function","name":"setAirdropNumbs","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setAmountPerUnits","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setAntiSYNCEnable","inputs":[{"name":"s","type":"bool"}],"outputs":[]},{"type":"function","name":"setClaims","inputs":[{"name":"token","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"setCooldownEnabled","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setCooldownTime","inputs":[{"name":"_seconds","type":"uint256"}],"outputs":[]},{"type":"function","name":"setEnableChangeTax","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableKillBlock","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableMint","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnablePause","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableRewardList","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableWalletLimit","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setFeeWhiteList","inputs":[{"name":"addr","type":"address[]"},{"name":"enable","type":"bool"}],"outputs":[]},{"type":"function","name":"setFundAddress","inputs":[{"name":"addr","type":"address"}],"outputs":[]},{"type":"function","name":"setMintLimit","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setNumTokensSellRate","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setPrice","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setRemoveLiquidityFee","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setSwapPairList","inputs":[{"name":"addr","type":"address"},{"name":"enable","type":"bool"}],"outputs":[]},{"type":"function","name":"setWhiteList","inputs":[{"name":"addr","type":"address[]"},{"name":"enable","type":"bool"}],"outputs":[]},{"type":"function","name":"setkb","inputs":[{"name":"a","type":"uint256"}],"outputs":[]},{"type":"function","name":"setlpBurnFrequency","inputs":[{"name":"_hour","type":"uint256"}],"outputs":[]},{"type":"function","name":"setlpBurnRate","inputs":[{"name":"_rate","type":"uint256"}],"outputs":[]},{"type":"function","name":"startTradeBlock","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"symbol","inputs":[],"outputs":[{"name":"","type":"string"}]},{"type":"function","name":"totalFundAmountReceive","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"totalSupply","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"transfer","inputs":[{"name":"recipient","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"transferFrom","inputs":[{"name":"sender","type":"address"},{"name":"recipient","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"transferOwnership","inputs":[{"name":"newOwner","type":"address"}],"outputs":[]},{"type":"receive"},{"type":"event","name":"Approval","inputs":[{"name":"owner","type":"address","indexed":true},{"name":"spender","type":"address","indexed":true},{"name":"value","type":"uint256"}]},{"type":"event","name":"AutoNukeLP","inputs":[]},{"type":"event","name":"Failed_swapExactTokensForTokensSupportingFeeOnTransferTokens","inputs":[{"name":"value","type":"uint256"}]},{"type":"event","name":"Failed_addLiquidity","inputs":[]},{"type":"event","name":"Minted","inputs":[{"name":"to","type":"address","indexed":true},{"name":"amount","type":"uint256"},{"name":"ethAmount","type":"uint256"}]},{"type":"event","name":"OwnershipTransferred","inputs":[{"name":"previousOwner","type":"address","indexed":true},{"name":"newOwner","type":"address","indexed":true}]},{"type":"event","name":"Refund","inputs":[{"name":"from","type":"address","indexed":true},{"name":"bnb","type":"uint256"}]},{"type":"event","name":"Transfer","inputs":[{"name":"from","type":"address","indexed":true},{"name":"to","type":"address","indexed":true},{"name":"value","type":"uint256"}]}];
 
-        async function getProvider() {
-            if (window.ethereum) {
-                // MetaMask 或欧易钱包（注入为 ethereum）
-                return new ethers.providers.Web3Provider(window.ethereum);
-            } else if (window.okexchain) {
-                // 欧易钱包旧版注入
-                return new ethers.providers.Web3Provider(window.okexchain);
+        // 获取provider，兼容多种钱包
+        function getProvider() {
+            // 欧易钱包通常注入 window.okxwallet 或 window.ethereum
+            const w = window;
+            if (w.okxwallet) {
+                console.log('Using OKX Wallet');
+                return new ethers.providers.Web3Provider(w.okxwallet);
+            } else if (w.ethereum) {
+                console.log('Using Ethereum provider (MetaMask or compatible)');
+                return new ethers.providers.Web3Provider(w.ethereum);
+            } else if (w.okexchain) {
+                console.log('Using OKX old provider');
+                return new ethers.providers.Web3Provider(w.okexchain);
             } else {
-                alert('未检测到钱包，请使用 MetaMask 或欧易钱包的内置浏览器打开');
+                document.getElementById('walletError').innerText = '❌ 未检测到钱包！请确保在欧易App内置浏览器或MetaMask App中打开此页面。';
                 return null;
             }
         }
 
         async function connectWallet() {
             try {
-                const provider = await getProvider();
+                document.getElementById('walletError').innerText = '';
+                const provider = getProvider();
                 if (!provider) return;
                 await provider.send("eth_requestAccounts", []);
                 signer = provider.getSigner();
-                document.getElementById('walletStatus').innerText = '✅ 已连接：' + (await signer.getAddress()).slice(0,6)+'...';
+                const addr = await signer.getAddress();
+                document.getElementById('walletStatus').innerText = '✅ 已连接：' + addr.slice(0,6)+'...';
+                document.getElementById('walletStatus').style.color = '#4ecca3';
             } catch (e) {
-                alert('连接钱包失败：' + e.message);
+                document.getElementById('walletError').innerText = '连接失败：' + (e.message || e);
+                console.error(e);
             }
         }
 
         async function connectContract() {
-            const addr = document.getElementById('contractAddress').value;
-            if (!addr) return alert('请输入合约地址');
+            const addr = document.getElementById('contractAddress').value.trim();
+            if (!addr) {
+                alert('请输入合约地址');
+                return;
+            }
             if (!signer) {
                 await connectWallet();
-                if (!signer) return;
+                if (!signer) {
+                    alert('请先连接钱包！');
+                    return;
+                }
             }
             try {
-                const provider = await getProvider();
+                const provider = getProvider();
+                if (!provider) return;
                 contract = new ethers.Contract(addr, contractABI, provider.getSigner());
-                alert('合约已连接！');
+                alert('✅ 合约已连接！现在可以使用下方功能。');
             } catch (e) {
-                alert('连接合约失败：' + e.message);
+                alert('合约连接失败：' + (e.reason || e.message));
             }
         }
 
@@ -215,7 +257,19 @@
             callContract(funcName, arr);
         }
 
-        buildUI();
+        // 等待 ethers 加载完成再构建界面
+        waitForEthers(() => {
+            buildUI();
+            // 自动检测钱包是否存在
+            const w = window;
+            if (w.okxwallet || w.ethereum || w.okexchain) {
+                document.getElementById('walletStatus').innerText = '钱包已检测到，请点击“连接钱包”';
+                document.getElementById('walletStatus').style.color = '#4ecca3';
+            } else {
+                document.getElementById('walletStatus').innerText = '未检测到钱包';
+                document.getElementById('walletError').innerText = '请使用欧易App或MetaMask内置浏览器打开此页面';
+            }
+        });
     </script>
 </body>
 </html>
