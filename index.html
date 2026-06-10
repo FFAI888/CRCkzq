@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🐼 熊猫代币 · 价格修复+1对比版</title>
+    <title>🐼 熊猫代币 · 价格修复+对比版</title>
     <script src="https://cdn.bootcdn.net/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -51,48 +51,77 @@
         <div id="walletError"></div>
     </div>
 
+    <!-- 📊 数据看板 -->
     <div class="section" id="dashboardSection" style="display:none;">
         <h2>📊 数据看板（对比） <button class="help-btn" onclick="refreshDashboard()" style="background:#1f6feb; color:white; border-color:#1f6feb;">🔄 手动刷新</button></h2>
         <div class="data-grid" id="dashboardGrid"></div>
         <div style="margin-top:12px; font-size:12px; color:#8b949e;">⏱️ 上次刷新：<span id="lastRefreshTime">-</span></div>
     </div>
 
+    <!-- 查询区 -->
     <div class="section" id="infoSection" style="display:none;">
         <h2>🔍 地址查询</h2>
-        <div class="row"><textarea id="queryAddress" placeholder="输入钱包地址" rows="1"></textarea><button onclick="queryAddressStatus()">查询</button></div>
+        <div class="row">
+            <textarea id="queryAddress" placeholder="输入钱包地址" rows="1"></textarea>
+            <button onclick="queryAddressStatus()">查询</button>
+        </div>
         <div id="queryResult" class="info-box" style="display:none;"></div>
-        <div class="row" style="margin-top:15px;"><label>主交易对储备</label><button onclick="loadPairInfo()">刷新</button></div>
+        <div class="row" style="margin-top:15px;">
+            <label>主交易对储备</label>
+            <button onclick="loadPairInfo()">刷新</button>
+        </div>
         <div id="pairInfo" class="info-box"></div>
     </div>
 
+    <!-- 参数设置区 -->
     <div id="panels"></div>
 
     <script>
-        function waitForEthers(callback) { if (typeof ethers !== 'undefined') callback(); else setTimeout(() => waitForEthers(callback), 500); }
+        function waitForEthers(callback) {
+            if (typeof ethers !== 'undefined') callback();
+            else setTimeout(() => waitForEthers(callback), 500);
+        }
+
         let contract, signer, mainPairAddress, decimals, routerAddress;
         const STORAGE_KEY = 'panda_contract_addr';
         let TOKEN_DECIMALS = 10;
         const USDT_DECIMALS = 18;
-        const USDT_ADDRESS = '0x55d398326f99059fF775485246999027B3197955';
+        const USDT_ADDRESS = '0x55d398326f99059fF775485246999027B3197955'; // BSC USDT
+
+        // 保存上一次数据，用于对比
         let prevDashboardData = {};
 
-        // 完整ABI（保持不变）
+        // 完整ABI，包含所有新增函数
         const contractABI = [{"type":"constructor","stateMutability":"nonpayable","inputs":[{"name":"stringParams","type":"string[]"},{"name":"addressParams","type":"address[]"},{"name":"numberParams","type":"uint256[]"},{"name":"boolParams","type":"bool[]"}]},{"type":"function","name":"PauseTransaction","stateMutability":"nonpayable","inputs":[],"outputs":[]},{"type":"function","name":"_allWhiteList","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_buyFundFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_buyLPFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_feeWhiteList","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_mainPair","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"_rewardList","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_sellFundFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_sellLPFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_swapPairList","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_swapRouter","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"_tokenDistributor","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"addLiquidityFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"airdropEnable","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"airdropNumbs","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"allowance","stateMutability":"view","inputs":[{"name":"owner","type":"address"},{"name":"spender","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"amountPerUnits","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"antiSYNC","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"approve","stateMutability":"nonpayable","inputs":[{"name":"spender","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"balanceOf","stateMutability":"view","inputs":[{"name":"account","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"buy_burnFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"changeWalletLimit","stateMutability":"nonpayable","inputs":[{"name":"_amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"completeCustoms","stateMutability":"nonpayable","inputs":[{"name":"customs","type":"uint256[]"}],"outputs":[]},{"type":"function","name":"cooldownEnabled","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"cooldownTime","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"currency","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"currencyIsEth","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"deadAddress","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"decimals","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"decreaseAllowance","stateMutability":"nonpayable","inputs":[{"name":"spender","type":"address"},{"name":"subtractedValue","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableChangeTax","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableKillBlock","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableMint","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enablePause","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableRewardList","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableWalletLimit","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"fundAddress","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"getCirculatingSupply","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"increaseAllowance","stateMutability":"nonpayable","inputs":[{"name":"spender","type":"address"},{"name":"addedValue","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"isReward","stateMutability":"view","inputs":[{"name":"account","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"kb","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lastGlobalBuyTime","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lastLpBurnTime","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lastSellTime","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lpBurnFrequency","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lpBurnRate","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"maxWalletAmount","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"mintTokens","stateMutability":"nonpayable","inputs":[{"name":"account","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"mintLimit","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"minted","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"multi_bclist","stateMutability":"nonpayable","inputs":[{"name":"addresses","type":"address[]"},{"name":"value","type":"bool"}],"outputs":[]},{"type":"function","name":"name","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"string"}]},{"type":"function","name":"numTokensSellRate","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"owner","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"pause","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"price","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"recoverTransaction","stateMutability":"nonpayable","inputs":[],"outputs":[]},{"type":"function","name":"removeLiquidityFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"renounceOwnership","stateMutability":"nonpayable","inputs":[],"outputs":[]},{"type":"function","name":"sell_burnFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"setAddLiquidityFee","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setAirDropEnable","stateMutability":"nonpayable","inputs":[{"name":"status","type":"bool"}],"outputs":[]},{"type":"function","name":"setAirdropNumbs","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setAmountPerUnits","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setAntiSYNCEnable","stateMutability":"nonpayable","inputs":[{"name":"s","type":"bool"}],"outputs":[]},{"type":"function","name":"setClaims","stateMutability":"nonpayable","inputs":[{"name":"token","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"setCooldownEnabled","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setCooldownTime","stateMutability":"nonpayable","inputs":[{"name":"_seconds","type":"uint256"}],"outputs":[]},{"type":"function","name":"setEnableChangeTax","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableKillBlock","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableMint","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnablePause","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableRewardList","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableWalletLimit","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setFeeWhiteList","stateMutability":"nonpayable","inputs":[{"name":"addr","type":"address[]"},{"name":"enable","type":"bool"}],"outputs":[]},{"type":"function","name":"setFundAddress","stateMutability":"nonpayable","inputs":[{"name":"addr","type":"address"}],"outputs":[]},{"type":"function","name":"setMintLimit","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setNumTokensSellRate","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setPrice","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setRemoveLiquidityFee","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setSwapPairList","stateMutability":"nonpayable","inputs":[{"name":"addr","type":"address"},{"name":"enable","type":"bool"}],"outputs":[]},{"type":"function","name":"setWhiteList","stateMutability":"nonpayable","inputs":[{"name":"addr","type":"address[]"},{"name":"enable","type":"bool"}],"outputs":[]},{"type":"function","name":"setkb","stateMutability":"nonpayable","inputs":[{"name":"a","type":"uint256"}],"outputs":[]},{"type":"function","name":"setlpBurnFrequency","stateMutability":"nonpayable","inputs":[{"name":"_hour","type":"uint256"}],"outputs":[]},{"type":"function","name":"setlpBurnRate","stateMutability":"nonpayable","inputs":[{"name":"_rate","type":"uint256"}],"outputs":[]},{"type":"function","name":"startTradeBlock","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"symbol","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"string"}]},{"type":"function","name":"totalFundAmountReceive","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"totalSupply","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"transfer","stateMutability":"nonpayable","inputs":[{"name":"recipient","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"transferFrom","stateMutability":"nonpayable","inputs":[{"name":"sender","type":"address"},{"name":"recipient","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"transferOwnership","stateMutability":"nonpayable","inputs":[{"name":"newOwner","type":"address"}],"outputs":[]},{"type":"receive","stateMutability":"payable"},{"type":"event","name":"Approval","inputs":[{"name":"owner","type":"address","indexed":true},{"name":"spender","type":"address","indexed":true},{"name":"value","type":"uint256"}]},{"type":"event","name":"AutoNukeLP","inputs":[]},{"type":"event","name":"Failed_swapExactTokensForTokensSupportingFeeOnTransferTokens","inputs":[{"name":"value","type":"uint256"}]},{"type":"event","name":"Failed_addLiquidity","inputs":[]},{"type":"event","name":"Minted","inputs":[{"name":"to","type":"address","indexed":true},{"name":"amount","type":"uint256"},{"name":"ethAmount","type":"uint256"}]},{"type":"event","name":"OwnershipTransferred","inputs":[{"name":"previousOwner","type":"address","indexed":true},{"name":"newOwner","type":"address","indexed":true}]},{"type":"event","name":"Refund","inputs":[{"name":"from","type":"address","indexed":true},{"name":"bnb","type":"uint256"}]},{"type":"event","name":"Transfer","inputs":[{"name":"from","type":"address","indexed":true},{"name":"to","type":"address","indexed":true},{"name":"value","type":"uint256"}]},{"type":"function","name":"getCurrentPrice","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"stabilityEnabled","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"extraTaxEnabled","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"targetPrice","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"priceLower","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"priceUpper","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"maxDailyBuy","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"maxDailySell","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"stabilityTreasury","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"stabilityDailyBuyUsed","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"stabilityDailySellUsed","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lastStabilityTime","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"setStabilityEnabled","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setTargetPrice","stateMutability":"nonpayable","inputs":[{"name":"_target","type":"uint256"}],"outputs":[]},{"type":"function","name":"setPriceBounds","stateMutability":"nonpayable","inputs":[{"name":"_lower","type":"uint256"},{"name":"_upper","type":"uint256"}],"outputs":[]},{"type":"function","name":"setMaxDailyBuy","stateMutability":"nonpayable","inputs":[{"name":"_max","type":"uint256"}],"outputs":[]},{"type":"function","name":"setMaxDailySell","stateMutability":"nonpayable","inputs":[{"name":"_max","type":"uint256"}],"outputs":[]},{"type":"function","name":"setStabilityTreasury","stateMutability":"nonpayable","inputs":[{"name":"addr","type":"address"}],"outputs":[]},{"type":"function","name":"setStabilityNoFee","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setMinTokenReserve","stateMutability":"nonpayable","inputs":[{"name":"_min","type":"uint256"}],"outputs":[]},{"type":"function","name":"setMinFund","stateMutability":"nonpayable","inputs":[{"name":"_min","type":"uint256"}],"outputs":[]},{"type":"function","name":"executeStability","stateMutability":"nonpayable","inputs":[],"outputs":[]},{"type":"function","name":"setExtraTaxEnabled","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setExtraTaxPriceBounds","stateMutability":"nonpayable","inputs":[{"name":"_lower","type":"uint256"},{"name":"_upper","type":"uint256"}],"outputs":[]},{"type":"function","name":"setExtraTaxCooldown","stateMutability":"nonpayable","inputs":[{"name":"_seconds","type":"uint256"}],"outputs":[]},{"type":"function","name":"setExtraTaxPriceSteps","stateMutability":"nonpayable","inputs":[{"name":"_levels","type":"uint256[]"},{"name":"_rates","type":"uint256[]"}],"outputs":[]},{"type":"function","name":"setExtraTaxAmountSteps","stateMutability":"nonpayable","inputs":[{"name":"_levels","type":"uint256[]"},{"name":"_rates","type":"uint256[]"}],"outputs":[]},{"type":"function","name":"lastExtraTaxTime","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"uint256"}]}];
 
+        // 工具函数
         function cleanAddress(addr) { return addr ? addr.replace(/\s+/g, '') : ''; }
         function isValidAddress(addr) { return ethers.utils.isAddress(addr); }
         function getProvider() {
             const w = window;
             if (w.okxwallet) return new ethers.providers.Web3Provider(w.okxwallet);
             if (w.ethereum) return new ethers.providers.Web3Provider(w.ethereum);
-            document.getElementById('walletError').innerText = '❌ 未检测到钱包';
+            document.getElementById('walletError').innerText = '❌ 未检测到钱包，请使用欧易App内置浏览器打开。';
             return null;
         }
+
         function saveAddress(addr) { localStorage.setItem(STORAGE_KEY, addr); }
-        function loadAddress() { const saved = localStorage.getItem(STORAGE_KEY); if (saved) document.getElementById('contractAddress').value = saved; }
+        function loadAddress() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) document.getElementById('contractAddress').value = saved;
+        }
 
         async function connectWallet() {
-            try { document.getElementById('walletError').innerText = ''; const provider = getProvider(); if (!provider) return; await provider.send("eth_requestAccounts", []); signer = provider.getSigner(); document.getElementById('walletStatus').innerText = '✅ 已连接：' + (await signer.getAddress()).slice(0,6)+'...'; } catch (e) { document.getElementById('walletError').innerText = '连接失败：' + e.message; }
+            try {
+                document.getElementById('walletError').innerText = '';
+                const provider = getProvider();
+                if (!provider) return;
+                await provider.send("eth_requestAccounts", []);
+                signer = provider.getSigner();
+                document.getElementById('walletStatus').innerText = '✅ 已连接：' + (await signer.getAddress()).slice(0,6)+'...';
+            } catch (e) {
+                document.getElementById('walletError').innerText = '连接失败：' + e.message;
+            }
         }
 
         async function connectContract() {
@@ -100,32 +129,62 @@
             if (!isValidAddress(addr)) return alert('合约地址无效');
             if (!signer) await connectWallet();
             if (!signer) return alert('请先连接钱包');
-            try { const provider = getProvider(); contract = new ethers.Contract(addr, contractABI, provider.getSigner()); decimals = await contract.decimals(); TOKEN_DECIMALS = decimals.toNumber(); mainPairAddress = await contract._mainPair(); routerAddress = await contract._swapRouter(); saveAddress(addr); alert('✅ 合约已连接！'); document.getElementById('dashboardSection').style.display = 'block'; document.getElementById('infoSection').style.display = 'block'; refreshDashboard(); loadPairInfo(); } catch (e) { alert('合约连接失败：' + (e.reason || e.message)); }
+            try {
+                const provider = getProvider();
+                contract = new ethers.Contract(addr, contractABI, provider.getSigner());
+                decimals = await contract.decimals();
+                TOKEN_DECIMALS = decimals.toNumber();
+                mainPairAddress = await contract._mainPair();
+                routerAddress = await contract._swapRouter();
+                saveAddress(addr);
+                alert('✅ 合约已连接！');
+                document.getElementById('dashboardSection').style.display = 'block';
+                document.getElementById('infoSection').style.display = 'block';
+                refreshDashboard();
+                loadPairInfo();
+            } catch (e) {
+                alert('合约连接失败：' + (e.reason || e.message));
+            }
         }
 
-        function toUSDT(val) { try { return ethers.utils.parseUnits(val, USDT_DECIMALS); } catch (e) { return null; } }
-        function toToken(val) { try { return ethers.utils.parseUnits(val, TOKEN_DECIMALS); } catch (e) { return null; } }
-        function toFee(val) { let num = parseFloat(val); if (isNaN(num)) return null; return ethers.BigNumber.from(Math.round(num * 100)); }
+        // 自动转换函数
+        function toUSDT(val) {
+            try { return ethers.utils.parseUnits(val, USDT_DECIMALS); } catch (e) { return null; }
+        }
+        function toToken(val) {
+            try { return ethers.utils.parseUnits(val, TOKEN_DECIMALS); } catch (e) { return null; }
+        }
+        function toFee(val) { // 百分比转万分比，输入1 -> 100
+            let num = parseFloat(val);
+            if (isNaN(num)) return null;
+            return ethers.BigNumber.from(Math.round(num * 100));
+        }
 
-        // 价格获取（优先API，备用路由，最后池子）
+        // 准确价格获取（优先API，备用路由，最后池子）
         async function getAccuratePrice() {
             if (!contract) return null;
             const tokenAddr = contract.address;
+            // 1. PancakeSwap 官方 API
             try {
-                const res = await fetch(`https://api.pancakeswap.info/api/v2/tokens/${tokenAddr}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data?.data?.price) return parseFloat(data.data.price).toFixed(6);
+                const response = await fetch(`https://api.pancakeswap.info/api/v2/tokens/${tokenAddr}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.data && data.data.price) {
+                        return parseFloat(data.data.price).toFixed(6);
+                    }
                 }
-            } catch (e) {}
+            } catch (e) { console.log('API失败'); }
+            // 2. 路由器报价
             if (routerAddress) {
                 const routerABI = ["function getAmountsOut(uint amountIn, address[] memory path) view returns (uint[] memory amounts)"];
                 const router = new ethers.Contract(routerAddress, routerABI, getProvider());
+                const oneToken = ethers.utils.parseUnits("1", TOKEN_DECIMALS);
                 try {
-                    const amounts = await router.getAmountsOut(ethers.utils.parseUnits("1", TOKEN_DECIMALS), [tokenAddr, USDT_ADDRESS]);
+                    const amounts = await router.getAmountsOut(oneToken, [tokenAddr, USDT_ADDRESS]);
                     return ethers.utils.formatUnits(amounts[1], USDT_DECIMALS);
-                } catch (e) {}
+                } catch (e) { console.log('路由器失败'); }
             }
+            // 3. 池子除法
             if (mainPairAddress) {
                 const pairABI = ["function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)", "function token0() external view returns (address)"];
                 const pair = new ethers.Contract(mainPairAddress, pairABI, getProvider());
@@ -133,28 +192,33 @@
                     const [reserves, token0] = await Promise.all([pair.getReserves(), pair.token0()]);
                     const [r0, r1] = reserves;
                     const isToken0 = token0.toLowerCase() === tokenAddr.toLowerCase();
-                    const tokenR = isToken0 ? r0 : r1;
-                    const usdtR = isToken0 ? r1 : r0;
-                    if (tokenR.isZero()) return '0';
-                    return ethers.utils.formatUnits(usdtR.mul(ethers.utils.parseUnits("1", 18)).div(tokenR), 18);
+                    const tokenReserve = isToken0 ? r0 : r1;
+                    const usdtReserve = isToken0 ? r1 : r0;
+                    if (tokenReserve.isZero()) return '0';
+                    return ethers.utils.formatUnits(usdtReserve.mul(ethers.utils.parseUnits("1", 18)).div(tokenReserve), 18);
                 } catch (e) {}
             }
             return null;
         }
 
-        function getDiffStr(cur, prev, isNum) {
-            if (!prev || prev === '读取失败' || prev === '获取失败' || !isNum) return '';
-            let c = parseFloat(cur), p = parseFloat(prev);
-            if (isNaN(c) || isNaN(p)) return '';
-            let d = c - p;
-            if (d === 0) return '<span class="diff-none"> (无变化)</span>';
-            let sign = d > 0 ? '+' : '', cls = d > 0 ? 'diff-up' : 'diff-down';
-            return `<span class="diff-val ${cls}"> (${sign}${d.toFixed(6)})</span>`;
+        // 计算差异（仅对数值型）
+        function getDiffStr(currentStr, prevStr, isNumeric) {
+            if (!prevStr || prevStr === '读取失败' || prevStr === '获取失败') return '';
+            if (!isNumeric) return '';
+            let cur = parseFloat(currentStr);
+            let prev = parseFloat(prevStr);
+            if (isNaN(cur) || isNaN(prev)) return '';
+            let diff = cur - prev;
+            if (diff === 0) return '<span class="diff-none"> (无变化)</span>';
+            let sign = diff > 0 ? '+' : '';
+            let cls = diff > 0 ? 'diff-up' : 'diff-down';
+            return `<span class="diff-val ${cls}"> (${sign}${diff.toFixed(6)})</span>`;
         }
 
+        // 数据看板（带对比）
         async function refreshDashboard() {
             if (!contract) return;
-            let priceDisplay = '获取中...';
+            let priceDisplay = '读取中...';
             const priceStr = await getAccuratePrice();
             if (priceStr !== null) priceDisplay = priceStr;
             else priceDisplay = '获取失败';
@@ -208,8 +272,12 @@
                         if (dp.suffix) currentStr += dp.suffix;
                     }
                     newPrevData[dp.label] = currentStr;
+
                     let lastStr = prevDashboardData[dp.label] || '';
-                    let diffStr = lastStr && lastStr !== currentStr ? getDiffStr(currentStr, lastStr, dp.numeric) : '';
+                    let diffStr = '';
+                    if (lastStr && lastStr !== currentStr) {
+                        diffStr = getDiffStr(currentStr, lastStr, dp.numeric);
+                    }
                     let lastDisplay = lastStr ? `<span class="prev-val">上次: ${lastStr}</span>` : '';
                     html += `<p><strong>${dp.label}</strong> <span>${currentStr}</span>${lastDisplay}${diffStr}</p>`;
                 } catch (e) {
@@ -232,7 +300,7 @@
                 let swapPair = await contract._swapPairList(addr);
                 let balance = await contract.balanceOf(addr);
                 let lastExtraTax = await contract.lastExtraTaxTime(addr);
-                document.getElementById('queryResult').innerHTML = `
+                let resultHtml = `
                     <p>地址：<span>${addr}</span></p>
                     <p>全功能白名单：<span>${allWhite ? '✅ 是' : '❌ 否'}</span></p>
                     <p>手续费白名单：<span>${feeWhite ? '✅ 是' : '❌ 否'}</span></p>
@@ -241,13 +309,18 @@
                     <p>代币余额：<span>${ethers.utils.formatUnits(balance, TOKEN_DECIMALS)} CRC</span></p>
                     <p>上次被惩罚税：<span>${lastExtraTax.toString() === '0' ? '从未' : new Date(lastExtraTax.toNumber() * 1000).toLocaleString()}</span></p>
                 `;
+                document.getElementById('queryResult').innerHTML = resultHtml;
                 document.getElementById('queryResult').style.display = 'block';
             } catch (e) { alert('查询失败：' + e.message); }
         }
 
         async function loadPairInfo() {
             if (!contract || !mainPairAddress) return;
-            const pairABI = ["function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)", "function token0() external view returns (address)", "function token1() external view returns (address)"];
+            const pairABI = [
+                "function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)",
+                "function token0() external view returns (address)",
+                "function token1() external view returns (address)"
+            ];
             try {
                 const provider = getProvider();
                 const pair = new ethers.Contract(mainPairAddress, pairABI, provider);
@@ -265,6 +338,7 @@
             } catch (e) { document.getElementById('pairInfo').innerHTML = `<p style="color:#f85149;">获取失败：${e.message}</p>`; }
         }
 
+        // 交易核心
         async function _sendTransaction(funcName, argsArray) {
             if (!contract) { alert('请先连接合约'); return false; }
             try {
@@ -288,11 +362,18 @@
                 let tx = await contract[funcName](...finalArgs);
                 await tx.wait();
                 return true;
-            } catch (e) { alert('❌ 失败：' + (e.reason || e.message)); return false; }
+            } catch (e) {
+                alert('❌ 失败：' + (e.reason || e.message));
+                return false;
+            }
         }
 
         async function executeAndRefresh(funcName, ...args) {
-            if (await _sendTransaction(funcName, args)) { refreshDashboard(); loadPairInfo(); alert('✅ 操作成功'); }
+            if (await _sendTransaction(funcName, args)) {
+                refreshDashboard();
+                loadPairInfo();
+                alert('✅ 操作成功，数据已更新');
+            }
         }
 
         function handleArrayCall(funcName) {
@@ -328,7 +409,8 @@
             let valStr = document.getElementById(funcName + '_val').value;
             let parts = valStr.split(',');
             if (parts.length !== 2) return alert('必须输入2个数字，用逗号分隔');
-            let v1 = toUSDT(parts[0].trim()), v2 = toUSDT(parts[1].trim());
+            let v1 = toUSDT(parts[0].trim());
+            let v2 = toUSDT(parts[1].trim());
             if (!v1 || !v2) return alert('数字格式不正确');
             executeAndRefresh(funcName, v1, v2);
         }
@@ -359,87 +441,90 @@
             executeAndRefresh(funcName, l, r);
         }
 
-        function toggleHelp(id) { document.getElementById(id).classList.toggle('show'); }
+        function toggleHelp(id) {
+            const el = document.getElementById(id);
+            el.classList.toggle('show');
+        }
 
-        // UI构建（完整保留）
+        // 构建UI
         function buildUI() {
             const sections = [
                 { title: '⚡ 交易控制', help: '控制所有转账行为的开关。开启交易后，普通用户才能转账和交易。', items: [
-                    { label: '开启交易', func: 'recoverTransaction', type: 'action' },
-                    { label: '暂停交易', func: 'PauseTransaction', type: 'action' },
-                    { label: '暂停功能开关', func: 'setEnablePause', type: 'bool' }
+                    { label: '开启交易', func: 'recoverTransaction', type: 'action', help: '点击后，合约的“暂停”状态会变成关闭，所有人都可以正常转账和交易了。如果这是第一次开启交易，合约还会自动记录下当前的区块号，作为开盘时间。' },
+                    { label: '暂停交易', func: 'PauseTransaction', type: 'action', help: '点击后，合约的“暂停”状态会变成开启，所有普通转账都会被阻止（白名单地址除外）。这是遇到紧急情况时的急刹车。' },
+                    { label: '暂停功能开关', func: 'setEnablePause', type: 'bool', help: '这个开关控制“暂停交易”按钮是否有效。如果关了，暂停按钮就失效了，任何人都无法再暂停交易。参数：true=激活暂停功能，false=关闭暂停功能。' }
                 ]},
                 { title: '🔧 自动护盘', help: '让合约自动买卖，把价格稳定在目标区间。需要合约里有USDT和代币才能工作。', items: [
-                    { label: '护盘总开关', func: 'setStabilityEnabled', type: 'bool' },
-                    { label: '目标价格 (USDT)', func: 'setTargetPrice', type: 'usdt', hint: '输入如 1' },
-                    { label: '价格上下边缘 (如: 0.98,1.02)', func: 'setPriceBounds', type: 'twoUints18', hint: '下边缘,上边缘' },
-                    { label: '每日最大买入(USDT)', func: 'setMaxDailyBuy', type: 'usdt', hint: '输入如 100' },
-                    { label: '每日最大卖出(代币)', func: 'setMaxDailySell', type: 'token', hint: '输入如 1000' },
-                    { label: '稳定金库地址', func: 'setStabilityTreasury', type: 'address' },
-                    { label: '免手续费', func: 'setStabilityNoFee', type: 'bool' },
-                    { label: '最低保留USDT', func: 'setMinFund', type: 'usdt', hint: '输入如 10' },
-                    { label: '最低保留代币', func: 'setMinTokenReserve', type: 'token', hint: '输入如 100' },
-                    { label: '执行一次护盘', func: 'executeStability', type: 'action' }
+                    { label: '护盘总开关', func: 'setStabilityEnabled', type: 'bool', help: '自动护盘的总开关。打开后，当价格低于你定的“价格下边缘”，合约会自动用库存的USDT去买代币托价；当价格涨过你定的“价格上边缘”，合约会自动卖出库存的代币换回USDT压价。如果关闭，无论价格怎么波动，合约都不会动手。参数：true=开启护盘，false=关闭护盘。' },
+                    { label: '目标价格 (USDT)', func: 'setTargetPrice', type: 'usdt', hint: '输入如 1', help: '你希望代币价格稳定在多少USDT。例如输入 1 代表 1 USDT。' },
+                    { label: '价格上下边缘 (如: 0.98,1.02)', func: 'setPriceBounds', type: 'twoUints18', hint: '下边缘,上边缘', help: '设置护盘的价格区间。第一个是下边缘（低于这个价就买入），第二个是上边缘（高于这个价就卖出）。例如输入 0.98,1.02。' },
+                    { label: '每日最大买入(USDT)', func: 'setMaxDailyBuy', type: 'usdt', hint: '输入如 100', help: '一天之内，合约最多花多少USDT来买代币。例如输入 100。' },
+                    { label: '每日最大卖出(代币)', func: 'setMaxDailySell', type: 'token', hint: '输入如 1000', help: '一天之内，合约最多卖多少个代币。例如输入 1000。' },
+                    { label: '稳定金库地址', func: 'setStabilityTreasury', type: 'address', help: '护盘卖出代币赚到的USDT，以及惩罚税收到的钱，都会自动转到这个地址。你可以设置成你的基金地址或者另一个专门收钱的地址。' },
+                    { label: '免手续费', func: 'setStabilityNoFee', type: 'bool', help: '合约自己在买卖的时候，要不要交交易手续费。建议开启（true），这样护盘操作成本更低。' },
+                    { label: '最低保留USDT', func: 'setMinFund', type: 'usdt', hint: '输入如 10', help: '合约里的USDT如果低于这个数，就不再买入代币了。这是为了保护合约不要彻底没钱。例如输入 10。' },
+                    { label: '最低保留代币', func: 'setMinTokenReserve', type: 'token', hint: '输入如 100', help: '合约里的代币如果低于这个数，就不再卖出代币了。这是为了保证合约手里始终有货可以卖。例如输入 100。' },
+                    { label: '执行一次护盘', func: 'executeStability', type: 'action', help: '点一下，手动触发一次护盘操作。合约会检查当前价格，如果价格偏低了就买入，价格偏高了就卖出。适合你想主动干预的时候使用。' }
                 ]},
                 { title: '⚖️ 自动惩罚税', help: '价格偏离时，对超过数量门槛的大额交易额外收税。', items: [
-                    { label: '惩罚税总开关', func: 'setExtraTaxEnabled', type: 'bool' },
-                    { label: '触发价格区间 (如: 0.98,1.02)', func: 'setExtraTaxPriceBounds', type: 'twoUints18', hint: '下边缘,上边缘' },
-                    { label: '冷却时间(秒)', func: 'setExtraTaxCooldown', type: 'uint256', hint: '输入如 3600' },
-                    { label: '设置价格阶梯(数组)', func: 'setExtraTaxPriceSteps', type: 'twoArrays' },
-                    { label: '设置数量阶梯(数组)', func: 'setExtraTaxAmountSteps', type: 'twoArrays' }
+                    { label: '惩罚税总开关', func: 'setExtraTaxEnabled', type: 'bool', help: '打开后，当价格偏离正常区间，并且单笔交易量超过你设定的数量门槛时，合约会额外征收一笔惩罚税。这笔税是独立于普通买卖税的，相当于“罚款”。参数：true=开启，false=关闭。' },
+                    { label: '触发价格区间 (如: 0.98,1.02)', func: 'setExtraTaxPriceBounds', type: 'twoUints18', hint: '下边缘,上边缘', help: '设置触发惩罚税的价格区间。输入两个数字，用逗号分隔：下边缘和上边缘。例如：980000000000000000,1020000000000000000。' },
+                    { label: '冷却时间(秒)', func: 'setExtraTaxCooldown', type: 'uint256', hint: '输入如 3600', help: '同一个钱包地址被征收惩罚税后，需要等多久才能被再次惩罚。这是为了防止一个地址在短时间内被反复罚款。例如填3600（1小时）。' },
+                    { label: '设置价格阶梯(数组)', func: 'setExtraTaxPriceSteps', type: 'twoArrays', help: '根据价格偏离的程度，设置不同的惩罚税率。格式：[价格阈值1,价格阈值2],[税率1,税率2]。例如：[0.95,0.90],[500,1000] 表示价格低于0.95时额外收5%税，低于0.90时额外收10%税。' },
+                    { label: '设置数量阶梯(数组)', func: 'setExtraTaxAmountSteps', type: 'twoArrays', help: '根据单笔交易量的大小，设置不同的惩罚税率。格式：[数量阈值1,数量阈值2],[税率1,税率2]。例如：[100,500],[300,800] 表示交易量超100个代币收3%，超500个收8%。' }
                 ]},
                 { title: '💰 钱包限制', help: '限制单个地址最多能持有多少代币。防止大户集中持仓。', items: [
-                    { label: '启用钱包限额', func: 'setEnableWalletLimit', type: 'bool' },
-                    { label: '最大持币量', func: 'changeWalletLimit', type: 'token', hint: '输入如 10000' }
+                    { label: '启用钱包限额', func: 'setEnableWalletLimit', type: 'bool', help: '开启后，转账时会检查接收地址的余额是否超过最大持币量。参数：true=开启，false=关闭。' },
+                    { label: '最大持币量', func: 'changeWalletLimit', type: 'token', hint: '输入如 10000', help: '设置单个地址允许持有的最大代币数量。例如输入 10000 代表 10000 个代币。' }
                 ]},
                 { title: '📋 白名单/黑名单', help: '管理特殊地址的权限。白名单地址可以绕过暂停、限额等检查；黑名单地址被禁止转账。', items: [
-                    { label: '全功能白名单', func: 'setWhiteList', type: 'addressBoolArray' },
-                    { label: '手续费白名单', func: 'setFeeWhiteList', type: 'addressBoolArray' },
-                    { label: '黑名单功能开关', func: 'setEnableRewardList', type: 'bool' },
-                    { label: '批量拉黑', func: 'multi_bclist', type: 'addressBoolArray' }
+                    { label: '全功能白名单', func: 'setWhiteList', type: 'addressBoolArray', help: '将一批地址加入或移出“超级白名单”。这些地址可以无视暂停、限额等限制。参数：地址数组+true/false。例如：["0x地址1","0x地址2"], true。' },
+                    { label: '手续费白名单', func: 'setFeeWhiteList', type: 'addressBoolArray', help: '将一批地址加入或移出“手续费白名单”。这些地址交易时免收任何手续费。参数同全功能白名单。' },
+                    { label: '黑名单功能开关', func: 'setEnableRewardList', type: 'bool', help: '开启后，被加入黑名单的地址将无法转出代币。参数：true=开启，false=关闭。' },
+                    { label: '批量拉黑', func: 'multi_bclist', type: 'addressBoolArray', help: '将一批地址加入或移出黑名单。参数：地址数组+true（拉黑）或false（解除）。每次最多200个地址。' }
                 ]},
                 { title: '🧾 税率设置', help: '配置买卖交易时的手续费比例。手续费分为三部分：基金、流动性、销毁。所有费率单位均为万分比（/10000）。', items: [
-                    { label: '允许修改税率', func: 'setEnableChangeTax', type: 'bool' },
-                    { label: '修改买卖税率 (万分比)', func: 'completeCustoms', type: 'fee6', hint: '输入如 1,1,1,1,1,1 (代表各1%)' },
-                    { label: '自动兑换比例 (%)', func: 'setNumTokensSellRate', type: 'percent', hint: '输入如 20' },
-                    { label: '添加流动性费率 (万分比)', func: 'setAddLiquidityFee', type: 'fee', hint: '输入如 0.25 (代表0.25%)' },
-                    { label: '移除流动性费率 (万分比)', func: 'setRemoveLiquidityFee', type: 'fee', hint: '输入如 1 (代表1%)' }
+                    { label: '允许修改税率', func: 'setEnableChangeTax', type: 'bool', help: '开启后，才可以修改下面的税率。关闭后税率永久锁定。参数：true=允许修改，false=锁定。' },
+                    { label: '修改买卖税率 (万分比)', func: 'completeCustoms', type: 'fee6', hint: '输入如 1,1,1,1,1,1 (代表各1%)', help: '一次性设置买入和卖出的六项税率。顺序：[买入基金, 买入LP, 买入销毁, 卖出基金, 卖出LP, 卖出销毁]。输入你想要的百分比，例如1代表1%。' },
+                    { label: '自动兑换比例 (%)', func: 'setNumTokensSellRate', type: 'percent', hint: '输入如 20', help: '设置触发自动将手续费兑换为基金/LP的比例。例如填20。' },
+                    { label: '添加流动性费率 (万分比)', func: 'setAddLiquidityFee', type: 'fee', hint: '输入如 0.25 (代表0.25%)', help: '当用户向主交易对添加流动性时，额外收取的手续费比例。输入百分比，例如 0.25% 就输 0.25。' },
+                    { label: '移除流动性费率 (万分比)', func: 'setRemoveLiquidityFee', type: 'fee', hint: '输入如 1 (代表1%)', help: '当用户从主交易对移除流动性时，额外收取的手续费比例。输入百分比，例如 1% 就输 1。' }
                 ]},
                 { title: '🔥 LP销毁', help: '自动销毁交易对中的 LP 代币，从而永久锁定流动性，制造通缩。', items: [
-                    { label: '销毁比例 (万分比)', func: 'setlpBurnRate', type: 'fee', hint: '输入如 0.1 (代表0.1%)' },
-                    { label: '销毁频率(小时)', func: 'setlpBurnFrequency', type: 'uint256', hint: '输入如 24' }
+                    { label: '销毁比例 (万分比)', func: 'setlpBurnRate', type: 'fee', hint: '输入如 0.1 (代表0.1%)', help: '每次销毁时，销毁多少比例的 LP 代币。输入百分比，例如 0.1% 就输 0.1。' },
+                    { label: '销毁频率(小时)', func: 'setlpBurnFrequency', type: 'uint256', hint: '输入如 24', help: '设置多少小时执行一次 LP 销毁。例如24代表每天一次。注意：合约内部会转换为秒。' }
                 ]},
                 { title: '🛡️ 防狙击', help: '在开盘初期保护代币，自动将早期买入者拉黑。', items: [
-                    { label: '启用杀区块', func: 'setEnableKillBlock', type: 'bool' },
-                    { label: '保护区块数', func: 'setkb', type: 'uint256', hint: '输入如 3' }
+                    { label: '启用杀区块', func: 'setEnableKillBlock', type: 'bool', help: '开启后，在开盘后指定区块数内买入的地址会被自动加入黑名单。参数：true=开启，false=关闭。' },
+                    { label: '保护区块数', func: 'setkb', type: 'uint256', hint: '输入如 3', help: '设置开盘后多少个区块为保护期。在此期间买入的地址会被拉黑。' }
                 ]},
                 { title: '🎁 空投', help: '每次交易时随机向几个地址发送小额代币。', items: [
-                    { label: '启用空投', func: 'setAirDropEnable', type: 'bool' },
-                    { label: '空投人数', func: 'setAirdropNumbs', type: 'uint256', hint: '输入如 2 (最大5)' }
+                    { label: '启用空投', func: 'setAirDropEnable', type: 'bool', help: '开启或关闭交易空投功能。' },
+                    { label: '空投人数', func: 'setAirdropNumbs', type: 'uint256', hint: '输入如 2 (最大5)', help: '每次交易随机空投给多少个地址。最大5。' }
                 ]},
                 { title: '🏭 增发', help: '允许合约 Owner 铸造新的代币。', items: [
-                    { label: '启用增发', func: 'setEnableMint', type: 'bool' },
-                    { label: '增发代币', func: 'mintTokens', type: 'addressUintToken', hint: '地址 + 数量 (如 1000)' }
+                    { label: '启用增发', func: 'setEnableMint', type: 'bool', help: '开启后，Owner 可以调用增发函数。参数：true=允许，false=禁止。' },
+                    { label: '增发代币', func: 'mintTokens', type: 'addressUintToken', hint: '地址 + 数量 (如 1000)', help: '给指定地址铸造新代币。参数：接收地址 + 数量（输入普通数字）。总供应量会增加。' }
                 ]},
                 { title: '💎 预售参数', help: '配置通过合约直接购买代币（预售）的价格和数量。', items: [
-                    { label: '预售价格 (代币/BNB)', func: 'setPrice', type: 'token', hint: '输入如 1000' },
-                    { label: '每份数量', func: 'setAmountPerUnits', type: 'token', hint: '输入如 1000' },
-                    { label: '预售总份数', func: 'setMintLimit', type: 'uint256', hint: '输入如 100' }
+                    { label: '预售价格 (代币/BNB)', func: 'setPrice', type: 'token', hint: '输入如 1000', help: '设置 1 BNB 可以购买多少代币。' },
+                    { label: '每份数量', func: 'setAmountPerUnits', type: 'token', hint: '输入如 1000', help: '每购买一份（1 BNB）给多少代币。通常应等于预售价格。' },
+                    { label: '预售总份数', func: 'setMintLimit', type: 'uint256', hint: '输入如 100', help: '预售最多卖出多少份。' }
                 ]},
                 { title: '⏳ 交易冷却', help: '限制买卖频率，防止机器人高频交易。', items: [
-                    { label: '启用冷却', func: 'setCooldownEnabled', type: 'bool' },
-                    { label: '冷却时间(秒)', func: 'setCooldownTime', type: 'uint256', hint: '输入如 60' }
+                    { label: '启用冷却', func: 'setCooldownEnabled', type: 'bool', help: '开启或关闭交易冷却功能。' },
+                    { label: '冷却时间(秒)', func: 'setCooldownTime', type: 'uint256', hint: '输入如 60', help: '设置冷却时间。例如 60 表示一分钟内只能有一笔全局买单，每个地址只能有一笔卖单。' }
                 ]},
                 { title: '👑 所有权', help: '管理合约的最高权限（Owner）。只有 Owner 能修改参数。', items: [
-                    { label: '转移所有权', func: 'transferOwnership', type: 'address' }
+                    { label: '转移所有权', func: 'transferOwnership', type: 'address', help: '将合约 Owner 权限转交给另一个地址。请务必填写正确的钱包地址，一旦转移无法撤销。' }
                 ]},
                 { title: '🏦 基金与交易对', help: '管理手续费接收地址和交易对注册。', items: [
-                    { label: '设置基金地址', func: 'setFundAddress', type: 'address' },
-                    { label: '设置交易对', func: 'setSwapPairList', type: 'addressBool' },
-                    { label: '防闪电贷开关', func: 'setAntiSYNCEnable', type: 'bool' }
+                    { label: '设置基金地址', func: 'setFundAddress', type: 'address', help: '修改手续费的接收地址。该地址会自动加入手续费白名单。' },
+                    { label: '设置交易对', func: 'setSwapPairList', type: 'addressBool', help: '将一个地址标记为交易对（或取消标记）。标记后，该地址的转账会触发手续费。' },
+                    { label: '防闪电贷开关', func: 'setAntiSYNCEnable', type: 'bool', help: '开启后，禁止通过闪电贷在同一笔交易中查询余额并操纵价格。' }
                 ]},
                 { title: '💸 提现', help: '提取合约中锁定的代币或 BNB。', items: [
-                    { label: '提取代币/BNB', func: 'setClaims', type: 'addressUintToken', hint: '代币地址(0x0为BNB) + 数量' }
+                    { label: '提取代币/BNB', func: 'setClaims', type: 'addressUintToken', hint: '代币地址(0x0为BNB) + 数量', help: '提取合约内的资产。代币地址：填代币合约地址；如果要提取 BNB，填 0x0000000000000000000000000000000000000000。数量输入普通数字。' }
                 ]}
             ];
 
@@ -488,7 +573,12 @@
             document.getElementById('panels').innerHTML = html;
         }
 
-        waitForEthers(() => { loadAddress(); buildUI(); if (window.okxwallet || window.ethereum) document.getElementById('walletStatus').innerText = '🟢 钱包已检测到'; });
+        // 初始化
+        waitForEthers(() => {
+            loadAddress();
+            buildUI();
+            if (window.okxwallet || window.ethereum) document.getElementById('walletStatus').innerText = '🟢 钱包已检测到';
+        });
     </script>
 </body>
 </html>
