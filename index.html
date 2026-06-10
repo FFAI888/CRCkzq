@@ -51,77 +51,48 @@
         <div id="walletError"></div>
     </div>
 
-    <!-- 📊 数据看板 -->
     <div class="section" id="dashboardSection" style="display:none;">
         <h2>📊 数据看板（对比） <button class="help-btn" onclick="refreshDashboard()" style="background:#1f6feb; color:white; border-color:#1f6feb;">🔄 手动刷新</button></h2>
         <div class="data-grid" id="dashboardGrid"></div>
         <div style="margin-top:12px; font-size:12px; color:#8b949e;">⏱️ 上次刷新：<span id="lastRefreshTime">-</span></div>
     </div>
 
-    <!-- 查询区 -->
     <div class="section" id="infoSection" style="display:none;">
         <h2>🔍 地址查询</h2>
-        <div class="row">
-            <textarea id="queryAddress" placeholder="输入钱包地址" rows="1"></textarea>
-            <button onclick="queryAddressStatus()">查询</button>
-        </div>
+        <div class="row"><textarea id="queryAddress" placeholder="输入钱包地址" rows="1"></textarea><button onclick="queryAddressStatus()">查询</button></div>
         <div id="queryResult" class="info-box" style="display:none;"></div>
-        <div class="row" style="margin-top:15px;">
-            <label>主交易对储备</label>
-            <button onclick="loadPairInfo()">刷新</button>
-        </div>
+        <div class="row" style="margin-top:15px;"><label>主交易对储备</label><button onclick="loadPairInfo()">刷新</button></div>
         <div id="pairInfo" class="info-box"></div>
     </div>
 
-    <!-- 参数设置区 -->
     <div id="panels"></div>
 
     <script>
-        function waitForEthers(callback) {
-            if (typeof ethers !== 'undefined') callback();
-            else setTimeout(() => waitForEthers(callback), 500);
-        }
-
+        function waitForEthers(callback) { if (typeof ethers !== 'undefined') callback(); else setTimeout(() => waitForEthers(callback), 500); }
         let contract, signer, mainPairAddress, decimals, routerAddress;
         const STORAGE_KEY = 'panda_contract_addr';
         let TOKEN_DECIMALS = 10;
         const USDT_DECIMALS = 18;
-        const USDT_ADDRESS = '0x55d398326f99059fF775485246999027B3197955'; // BSC USDT
-
-        // 保存上一次数据，用于对比
+        const USDT_ADDRESS = '0x55d398326f99059fF775485246999027B3197955';
         let prevDashboardData = {};
 
-        // 完整ABI，包含所有新增函数
+        // 完整ABI（保持不变）
         const contractABI = [{"type":"constructor","stateMutability":"nonpayable","inputs":[{"name":"stringParams","type":"string[]"},{"name":"addressParams","type":"address[]"},{"name":"numberParams","type":"uint256[]"},{"name":"boolParams","type":"bool[]"}]},{"type":"function","name":"PauseTransaction","stateMutability":"nonpayable","inputs":[],"outputs":[]},{"type":"function","name":"_allWhiteList","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_buyFundFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_buyLPFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_feeWhiteList","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_mainPair","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"_rewardList","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_sellFundFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_sellLPFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"_swapPairList","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"_swapRouter","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"_tokenDistributor","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"addLiquidityFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"airdropEnable","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"airdropNumbs","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"allowance","stateMutability":"view","inputs":[{"name":"owner","type":"address"},{"name":"spender","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"amountPerUnits","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"antiSYNC","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"approve","stateMutability":"nonpayable","inputs":[{"name":"spender","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"balanceOf","stateMutability":"view","inputs":[{"name":"account","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"buy_burnFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"changeWalletLimit","stateMutability":"nonpayable","inputs":[{"name":"_amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"completeCustoms","stateMutability":"nonpayable","inputs":[{"name":"customs","type":"uint256[]"}],"outputs":[]},{"type":"function","name":"cooldownEnabled","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"cooldownTime","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"currency","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"currencyIsEth","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"deadAddress","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"decimals","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"decreaseAllowance","stateMutability":"nonpayable","inputs":[{"name":"spender","type":"address"},{"name":"subtractedValue","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableChangeTax","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableKillBlock","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableMint","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enablePause","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableRewardList","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"enableWalletLimit","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"fundAddress","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"getCirculatingSupply","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"increaseAllowance","stateMutability":"nonpayable","inputs":[{"name":"spender","type":"address"},{"name":"addedValue","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"isReward","stateMutability":"view","inputs":[{"name":"account","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"kb","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lastGlobalBuyTime","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lastLpBurnTime","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lastSellTime","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lpBurnFrequency","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lpBurnRate","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"maxWalletAmount","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"mintTokens","stateMutability":"nonpayable","inputs":[{"name":"account","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"mintLimit","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"minted","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"multi_bclist","stateMutability":"nonpayable","inputs":[{"name":"addresses","type":"address[]"},{"name":"value","type":"bool"}],"outputs":[]},{"type":"function","name":"name","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"string"}]},{"type":"function","name":"numTokensSellRate","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"owner","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"pause","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"price","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"recoverTransaction","stateMutability":"nonpayable","inputs":[],"outputs":[]},{"type":"function","name":"removeLiquidityFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"renounceOwnership","stateMutability":"nonpayable","inputs":[],"outputs":[]},{"type":"function","name":"sell_burnFee","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"setAddLiquidityFee","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setAirDropEnable","stateMutability":"nonpayable","inputs":[{"name":"status","type":"bool"}],"outputs":[]},{"type":"function","name":"setAirdropNumbs","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setAmountPerUnits","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setAntiSYNCEnable","stateMutability":"nonpayable","inputs":[{"name":"s","type":"bool"}],"outputs":[]},{"type":"function","name":"setClaims","stateMutability":"nonpayable","inputs":[{"name":"token","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"setCooldownEnabled","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setCooldownTime","stateMutability":"nonpayable","inputs":[{"name":"_seconds","type":"uint256"}],"outputs":[]},{"type":"function","name":"setEnableChangeTax","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableKillBlock","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableMint","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnablePause","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableRewardList","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setEnableWalletLimit","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setFeeWhiteList","stateMutability":"nonpayable","inputs":[{"name":"addr","type":"address[]"},{"name":"enable","type":"bool"}],"outputs":[]},{"type":"function","name":"setFundAddress","stateMutability":"nonpayable","inputs":[{"name":"addr","type":"address"}],"outputs":[]},{"type":"function","name":"setMintLimit","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setNumTokensSellRate","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setPrice","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setRemoveLiquidityFee","stateMutability":"nonpayable","inputs":[{"name":"newValue","type":"uint256"}],"outputs":[]},{"type":"function","name":"setSwapPairList","stateMutability":"nonpayable","inputs":[{"name":"addr","type":"address"},{"name":"enable","type":"bool"}],"outputs":[]},{"type":"function","name":"setWhiteList","stateMutability":"nonpayable","inputs":[{"name":"addr","type":"address[]"},{"name":"enable","type":"bool"}],"outputs":[]},{"type":"function","name":"setkb","stateMutability":"nonpayable","inputs":[{"name":"a","type":"uint256"}],"outputs":[]},{"type":"function","name":"setlpBurnFrequency","stateMutability":"nonpayable","inputs":[{"name":"_hour","type":"uint256"}],"outputs":[]},{"type":"function","name":"setlpBurnRate","stateMutability":"nonpayable","inputs":[{"name":"_rate","type":"uint256"}],"outputs":[]},{"type":"function","name":"startTradeBlock","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"symbol","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"string"}]},{"type":"function","name":"totalFundAmountReceive","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"totalSupply","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"transfer","stateMutability":"nonpayable","inputs":[{"name":"recipient","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"transferFrom","stateMutability":"nonpayable","inputs":[{"name":"sender","type":"address"},{"name":"recipient","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[]},{"type":"function","name":"transferOwnership","stateMutability":"nonpayable","inputs":[{"name":"newOwner","type":"address"}],"outputs":[]},{"type":"receive","stateMutability":"payable"},{"type":"event","name":"Approval","inputs":[{"name":"owner","type":"address","indexed":true},{"name":"spender","type":"address","indexed":true},{"name":"value","type":"uint256"}]},{"type":"event","name":"AutoNukeLP","inputs":[]},{"type":"event","name":"Failed_swapExactTokensForTokensSupportingFeeOnTransferTokens","inputs":[{"name":"value","type":"uint256"}]},{"type":"event","name":"Failed_addLiquidity","inputs":[]},{"type":"event","name":"Minted","inputs":[{"name":"to","type":"address","indexed":true},{"name":"amount","type":"uint256"},{"name":"ethAmount","type":"uint256"}]},{"type":"event","name":"OwnershipTransferred","inputs":[{"name":"previousOwner","type":"address","indexed":true},{"name":"newOwner","type":"address","indexed":true}]},{"type":"event","name":"Refund","inputs":[{"name":"from","type":"address","indexed":true},{"name":"bnb","type":"uint256"}]},{"type":"event","name":"Transfer","inputs":[{"name":"from","type":"address","indexed":true},{"name":"to","type":"address","indexed":true},{"name":"value","type":"uint256"}]},{"type":"function","name":"getCurrentPrice","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"stabilityEnabled","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"extraTaxEnabled","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"bool"}]},{"type":"function","name":"targetPrice","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"priceLower","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"priceUpper","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"maxDailyBuy","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"maxDailySell","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"stabilityTreasury","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"address"}]},{"type":"function","name":"stabilityDailyBuyUsed","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"stabilityDailySellUsed","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"lastStabilityTime","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"type":"function","name":"setStabilityEnabled","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setTargetPrice","stateMutability":"nonpayable","inputs":[{"name":"_target","type":"uint256"}],"outputs":[]},{"type":"function","name":"setPriceBounds","stateMutability":"nonpayable","inputs":[{"name":"_lower","type":"uint256"},{"name":"_upper","type":"uint256"}],"outputs":[]},{"type":"function","name":"setMaxDailyBuy","stateMutability":"nonpayable","inputs":[{"name":"_max","type":"uint256"}],"outputs":[]},{"type":"function","name":"setMaxDailySell","stateMutability":"nonpayable","inputs":[{"name":"_max","type":"uint256"}],"outputs":[]},{"type":"function","name":"setStabilityTreasury","stateMutability":"nonpayable","inputs":[{"name":"addr","type":"address"}],"outputs":[]},{"type":"function","name":"setStabilityNoFee","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setMinTokenReserve","stateMutability":"nonpayable","inputs":[{"name":"_min","type":"uint256"}],"outputs":[]},{"type":"function","name":"setMinFund","stateMutability":"nonpayable","inputs":[{"name":"_min","type":"uint256"}],"outputs":[]},{"type":"function","name":"executeStability","stateMutability":"nonpayable","inputs":[],"outputs":[]},{"type":"function","name":"setExtraTaxEnabled","stateMutability":"nonpayable","inputs":[{"name":"flag","type":"bool"}],"outputs":[]},{"type":"function","name":"setExtraTaxPriceBounds","stateMutability":"nonpayable","inputs":[{"name":"_lower","type":"uint256"},{"name":"_upper","type":"uint256"}],"outputs":[]},{"type":"function","name":"setExtraTaxCooldown","stateMutability":"nonpayable","inputs":[{"name":"_seconds","type":"uint256"}],"outputs":[]},{"type":"function","name":"setExtraTaxPriceSteps","stateMutability":"nonpayable","inputs":[{"name":"_levels","type":"uint256[]"},{"name":"_rates","type":"uint256[]"}],"outputs":[]},{"type":"function","name":"setExtraTaxAmountSteps","stateMutability":"nonpayable","inputs":[{"name":"_levels","type":"uint256[]"},{"name":"_rates","type":"uint256[]"}],"outputs":[]},{"type":"function","name":"lastExtraTaxTime","stateMutability":"view","inputs":[{"name":"","type":"address"}],"outputs":[{"name":"","type":"uint256"}]}];
 
-        // 工具函数
         function cleanAddress(addr) { return addr ? addr.replace(/\s+/g, '') : ''; }
         function isValidAddress(addr) { return ethers.utils.isAddress(addr); }
         function getProvider() {
             const w = window;
             if (w.okxwallet) return new ethers.providers.Web3Provider(w.okxwallet);
             if (w.ethereum) return new ethers.providers.Web3Provider(w.ethereum);
-            document.getElementById('walletError').innerText = '❌ 未检测到钱包，请使用欧易App内置浏览器打开。';
+            document.getElementById('walletError').innerText = '❌ 未检测到钱包';
             return null;
         }
-
         function saveAddress(addr) { localStorage.setItem(STORAGE_KEY, addr); }
-        function loadAddress() {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) document.getElementById('contractAddress').value = saved;
-        }
+        function loadAddress() { const saved = localStorage.getItem(STORAGE_KEY); if (saved) document.getElementById('contractAddress').value = saved; }
 
         async function connectWallet() {
-            try {
-                document.getElementById('walletError').innerText = '';
-                const provider = getProvider();
-                if (!provider) return;
-                await provider.send("eth_requestAccounts", []);
-                signer = provider.getSigner();
-                document.getElementById('walletStatus').innerText = '✅ 已连接：' + (await signer.getAddress()).slice(0,6)+'...';
-            } catch (e) {
-                document.getElementById('walletError').innerText = '连接失败：' + e.message;
-            }
+            try { document.getElementById('walletError').innerText = ''; const provider = getProvider(); if (!provider) return; await provider.send("eth_requestAccounts", []); signer = provider.getSigner(); document.getElementById('walletStatus').innerText = '✅ 已连接：' + (await signer.getAddress()).slice(0,6)+'...'; } catch (e) { document.getElementById('walletError').innerText = '连接失败：' + e.message; }
         }
 
         async function connectContract() {
@@ -129,62 +100,44 @@
             if (!isValidAddress(addr)) return alert('合约地址无效');
             if (!signer) await connectWallet();
             if (!signer) return alert('请先连接钱包');
+            try { const provider = getProvider(); contract = new ethers.Contract(addr, contractABI, provider.getSigner()); decimals = await contract.decimals(); TOKEN_DECIMALS = decimals.toNumber(); mainPairAddress = await contract._mainPair(); routerAddress = await contract._swapRouter(); saveAddress(addr); alert('✅ 合约已连接！'); document.getElementById('dashboardSection').style.display = 'block'; document.getElementById('infoSection').style.display = 'block'; refreshDashboard(); loadPairInfo(); } catch (e) { alert('合约连接失败：' + (e.reason || e.message)); }
+        }
+
+        function toUSDT(val) { try { return ethers.utils.parseUnits(val, USDT_DECIMALS); } catch (e) { return null; } }
+        function toToken(val) { try { return ethers.utils.parseUnits(val, TOKEN_DECIMALS); } catch (e) { return null; } }
+        function toFee(val) { let num = parseFloat(val); if (isNaN(num)) return null; return ethers.BigNumber.from(Math.round(num * 100)); }
+
+        // 带超时的 fetch
+        async function fetchWithTimeout(url, timeout = 5000) {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
             try {
-                const provider = getProvider();
-                contract = new ethers.Contract(addr, contractABI, provider.getSigner());
-                decimals = await contract.decimals();
-                TOKEN_DECIMALS = decimals.toNumber();
-                mainPairAddress = await contract._mainPair();
-                routerAddress = await contract._swapRouter();
-                saveAddress(addr);
-                alert('✅ 合约已连接！');
-                document.getElementById('dashboardSection').style.display = 'block';
-                document.getElementById('infoSection').style.display = 'block';
-                refreshDashboard();
-                loadPairInfo();
-            } catch (e) {
-                alert('合约连接失败：' + (e.reason || e.message));
-            }
+                const response = await fetch(url, { signal: controller.signal });
+                clearTimeout(id);
+                return response;
+            } catch (e) { clearTimeout(id); throw e; }
         }
 
-        // 自动转换函数
-        function toUSDT(val) {
-            try { return ethers.utils.parseUnits(val, USDT_DECIMALS); } catch (e) { return null; }
-        }
-        function toToken(val) {
-            try { return ethers.utils.parseUnits(val, TOKEN_DECIMALS); } catch (e) { return null; }
-        }
-        function toFee(val) { // 百分比转万分比，输入1 -> 100
-            let num = parseFloat(val);
-            if (isNaN(num)) return null;
-            return ethers.BigNumber.from(Math.round(num * 100));
-        }
-
-        // 准确价格获取（优先API，备用路由，最后池子）
+        // 准确价格获取（超时5秒，失败返回null）
         async function getAccuratePrice() {
             if (!contract) return null;
             const tokenAddr = contract.address;
-            // 1. PancakeSwap 官方 API
             try {
-                const response = await fetch(`https://api.pancakeswap.info/api/v2/tokens/${tokenAddr}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data && data.data && data.data.price) {
-                        return parseFloat(data.data.price).toFixed(6);
-                    }
+                const resp = await fetchWithTimeout(`https://api.pancakeswap.info/api/v2/tokens/${tokenAddr}`, 5000);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data?.data?.price) return parseFloat(data.data.price).toFixed(6);
                 }
-            } catch (e) { console.log('API失败'); }
-            // 2. 路由器报价
+            } catch (e) { console.log('价格API超时或失败'); }
             if (routerAddress) {
                 const routerABI = ["function getAmountsOut(uint amountIn, address[] memory path) view returns (uint[] memory amounts)"];
                 const router = new ethers.Contract(routerAddress, routerABI, getProvider());
-                const oneToken = ethers.utils.parseUnits("1", TOKEN_DECIMALS);
                 try {
+                    const oneToken = ethers.utils.parseUnits("1", TOKEN_DECIMALS);
                     const amounts = await router.getAmountsOut(oneToken, [tokenAddr, USDT_ADDRESS]);
                     return ethers.utils.formatUnits(amounts[1], USDT_DECIMALS);
-                } catch (e) { console.log('路由器失败'); }
+                } catch (e) { console.log('路由价格失败'); }
             }
-            // 3. 池子除法
             if (mainPairAddress) {
                 const pairABI = ["function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)", "function token0() external view returns (address)"];
                 const pair = new ethers.Contract(mainPairAddress, pairABI, getProvider());
@@ -192,33 +145,29 @@
                     const [reserves, token0] = await Promise.all([pair.getReserves(), pair.token0()]);
                     const [r0, r1] = reserves;
                     const isToken0 = token0.toLowerCase() === tokenAddr.toLowerCase();
-                    const tokenReserve = isToken0 ? r0 : r1;
-                    const usdtReserve = isToken0 ? r1 : r0;
-                    if (tokenReserve.isZero()) return '0';
-                    return ethers.utils.formatUnits(usdtReserve.mul(ethers.utils.parseUnits("1", 18)).div(tokenReserve), 18);
+                    const tokenR = isToken0 ? r0 : r1;
+                    const usdtR = isToken0 ? r1 : r0;
+                    if (tokenR.isZero()) return '0';
+                    return ethers.utils.formatUnits(usdtR.mul(ethers.utils.parseUnits("1", 18)).div(tokenR), 18);
                 } catch (e) {}
             }
             return null;
         }
 
-        // 计算差异（仅对数值型）
-        function getDiffStr(currentStr, prevStr, isNumeric) {
-            if (!prevStr || prevStr === '读取失败' || prevStr === '获取失败') return '';
-            if (!isNumeric) return '';
-            let cur = parseFloat(currentStr);
-            let prev = parseFloat(prevStr);
-            if (isNaN(cur) || isNaN(prev)) return '';
-            let diff = cur - prev;
-            if (diff === 0) return '<span class="diff-none"> (无变化)</span>';
-            let sign = diff > 0 ? '+' : '';
-            let cls = diff > 0 ? 'diff-up' : 'diff-down';
-            return `<span class="diff-val ${cls}"> (${sign}${diff.toFixed(6)})</span>`;
+        function getDiffStr(cur, prev, isNum) {
+            if (!prev || prev === '读取失败' || prev === '获取失败' || !isNum) return '';
+            let c = parseFloat(cur), p = parseFloat(prev);
+            if (isNaN(c) || isNaN(p)) return '';
+            let d = c - p;
+            if (d === 0) return '<span class="diff-none"> (无变化)</span>';
+            let sign = d > 0 ? '+' : '', cls = d > 0 ? 'diff-up' : 'diff-down';
+            return `<span class="diff-val ${cls}"> (${sign}${d.toFixed(6)})</span>`;
         }
 
-        // 数据看板（带对比）
         async function refreshDashboard() {
             if (!contract) return;
-            let priceDisplay = '读取中...';
+            document.getElementById('dashboardGrid').innerHTML = '<p>🔄 加载中...</p>';
+            let priceDisplay = '获取中...';
             const priceStr = await getAccuratePrice();
             if (priceStr !== null) priceDisplay = priceStr;
             else priceDisplay = '获取失败';
@@ -267,17 +216,13 @@
                         else if (dp.format === 'amount') currentStr = ethers.utils.formatUnits(raw, TOKEN_DECIMALS);
                         else if (dp.format === 'price') currentStr = ethers.utils.formatUnits(raw, USDT_DECIMALS);
                         else if (dp.format === 'token') currentStr = ethers.utils.formatUnits(raw, TOKEN_DECIMALS);
-                        else if (dp.format === 'timestamp') currentStr = raw.toString() === '0' ? '从未' : new Date(raw.toNumber() * 1000).toLocaleString();
+                        else if (dp.format === 'timestamp') currentStr = raw.toString() === '0' ? '从未' : new Date(raw.mul(1000).toNumber()).toLocaleString();
                         else currentStr = raw.toString();
                         if (dp.suffix) currentStr += dp.suffix;
                     }
                     newPrevData[dp.label] = currentStr;
-
                     let lastStr = prevDashboardData[dp.label] || '';
-                    let diffStr = '';
-                    if (lastStr && lastStr !== currentStr) {
-                        diffStr = getDiffStr(currentStr, lastStr, dp.numeric);
-                    }
+                    let diffStr = lastStr && lastStr !== currentStr ? getDiffStr(currentStr, lastStr, dp.numeric) : '';
                     let lastDisplay = lastStr ? `<span class="prev-val">上次: ${lastStr}</span>` : '';
                     html += `<p><strong>${dp.label}</strong> <span>${currentStr}</span>${lastDisplay}${diffStr}</p>`;
                 } catch (e) {
@@ -362,18 +307,11 @@
                 let tx = await contract[funcName](...finalArgs);
                 await tx.wait();
                 return true;
-            } catch (e) {
-                alert('❌ 失败：' + (e.reason || e.message));
-                return false;
-            }
+            } catch (e) { alert('❌ 失败：' + (e.reason || e.message)); return false; }
         }
 
         async function executeAndRefresh(funcName, ...args) {
-            if (await _sendTransaction(funcName, args)) {
-                refreshDashboard();
-                loadPairInfo();
-                alert('✅ 操作成功，数据已更新');
-            }
+            if (await _sendTransaction(funcName, args)) { refreshDashboard(); loadPairInfo(); alert('✅ 操作成功，数据已更新'); }
         }
 
         function handleArrayCall(funcName) {
@@ -409,8 +347,7 @@
             let valStr = document.getElementById(funcName + '_val').value;
             let parts = valStr.split(',');
             if (parts.length !== 2) return alert('必须输入2个数字，用逗号分隔');
-            let v1 = toUSDT(parts[0].trim());
-            let v2 = toUSDT(parts[1].trim());
+            let v1 = toUSDT(parts[0].trim()), v2 = toUSDT(parts[1].trim());
             if (!v1 || !v2) return alert('数字格式不正确');
             executeAndRefresh(funcName, v1, v2);
         }
@@ -441,10 +378,7 @@
             executeAndRefresh(funcName, l, r);
         }
 
-        function toggleHelp(id) {
-            const el = document.getElementById(id);
-            el.classList.toggle('show');
-        }
+        function toggleHelp(id) { document.getElementById(id).classList.toggle('show'); }
 
         // 构建UI
         function buildUI() {
@@ -573,12 +507,7 @@
             document.getElementById('panels').innerHTML = html;
         }
 
-        // 初始化
-        waitForEthers(() => {
-            loadAddress();
-            buildUI();
-            if (window.okxwallet || window.ethereum) document.getElementById('walletStatus').innerText = '🟢 钱包已检测到';
-        });
+        waitForEthers(() => { loadAddress(); buildUI(); if (window.okxwallet || window.ethereum) document.getElementById('walletStatus').innerText = '🟢 钱包已检测到'; });
     </script>
 </body>
 </html>
