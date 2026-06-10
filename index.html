@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🐼 熊猫代币 · 最终完整控制面板</title>
+    <title>🐼 熊猫代币 · 最终修正版</title>
     <script src="https://cdn.bootcdn.net/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -34,7 +34,7 @@
     </style>
 </head>
 <body>
-    <h1>🐼 熊猫代币 · 最终完整控制面板</h1>
+    <h1>🐼 熊猫代币 · 最终修正版</h1>
     <div class="section">
         <input type="text" class="contract-input" id="contractAddress" placeholder="代币合约地址 (0x...)">
         <div style="display:flex; align-items:center; flex-wrap:wrap;">
@@ -133,7 +133,7 @@
             }
         }
 
-        // 数据看板（手动刷新）
+        // 数据看板
         async function refreshDashboard() {
             if (!contract) return;
             const dataPoints = [
@@ -291,6 +291,14 @@
             executeAndRefresh(funcName, arr);
         }
 
+        function handleTwoUintsCall(funcName) {
+            let valStr = document.getElementById(funcName + '_val').value;
+            if (!valStr) return alert('请输入两个数字，用逗号分隔');
+            let arr = valStr.split(',').map(v => ethers.BigNumber.from(v.trim()));
+            if (arr.length !== 2) return alert('必须输入2个数字');
+            executeAndRefresh(funcName, arr[0], arr[1]);
+        }
+
         function handleTwoArraysCall(funcName) {
             let levels = document.getElementById(funcName+'_levels').value;
             let rates = document.getElementById(funcName+'_rates').value;
@@ -305,7 +313,7 @@
             el.classList.toggle('show');
         }
 
-        // 构建UI（保留V7全部区块 + 新增自动护盘和自动惩罚税）
+        // 构建UI
         function buildUI() {
             const sections = [
                 { title: '⚡ 交易控制', help: '控制所有转账行为的开关。开启交易后，普通用户才能转账和交易。', items: [
@@ -313,12 +321,11 @@
                     { label: '暂停交易', func: 'PauseTransaction', type: 'action', help: '点击后，合约的“暂停”状态会变成开启，所有普通转账都会被阻止（白名单地址除外）。这是遇到紧急情况时的急刹车。' },
                     { label: '暂停功能开关', func: 'setEnablePause', type: 'bool', help: '这个开关控制“暂停交易”按钮是否有效。如果关了，暂停按钮就失效了，任何人都无法再暂停交易。参数：true=激活暂停功能，false=关闭暂停功能。' }
                 ]},
-                // 新增自动护盘
+                // 自动护盘
                 { title: '🔧 自动护盘', help: '让合约自动买卖，把价格稳定在目标区间。需要合约里有USDT和代币才能工作。', items: [
-                    { label: '护盘总开关', func: 'setStabilityEnabled', type: 'bool', help: '这是自动护盘的总开关。打开后，当价格低于你定的“价格下边缘”，合约会自动用库存的USDT去买代币托价；当价格涨过你定的“价格上边缘”，合约会自动卖出库存的代币换回USDT压价。如果关闭，无论价格怎么波动，合约都不会动手。参数：true=开启护盘，false=关闭护盘。' },
+                    { label: '护盘总开关', func: 'setStabilityEnabled', type: 'bool', help: '自动护盘的总开关。打开后，当价格低于你定的“价格下边缘”，合约会自动用库存的USDT去买代币托价；当价格涨过你定的“价格上边缘”，合约会自动卖出库存的代币换回USDT压价。如果关闭，无论价格怎么波动，合约都不会动手。参数：true=开启护盘，false=关闭护盘。' },
                     { label: '目标价格 (USDT)', func: 'setTargetPrice', type: 'uint256', help: '你希望代币价格稳定在多少USDT。例如你希望价格稳定在1 USDT，就填1000000000000000000（1后面18个零，因为USDT精度是18）。' },
-                    { label: '价格下边缘 (USDT)', func: 'setPriceBounds', type: 'uint256', help: '低于这个价格，合约就会开始买入托价。例如你希望跌到0.98 USDT时护盘，就填980000000000000000（0.98乘以10的18次方）。' },
-                    { label: '价格上边缘 (USDT)', func: 'setPriceBounds', type: 'uint256', help: '高于这个价格，合约就会开始卖出压价。例如你希望涨到1.02 USDT时护盘，就填1020000000000000000（1.02乘以10的18次方）。' },
+                    { label: '价格上下边缘 (如: 0.98,1.02)', func: 'setPriceBounds', type: 'twoUints', help: '设置护盘的价格区间。输入两个数字，用逗号分隔：第一个是下边缘（低于这个价就买入），第二个是上边缘（高于这个价就卖出）。例如：980000000000000000,1020000000000000000 代表 0.98 USDT和1.02 USDT。注意精度18。' },
                     { label: '每日最大买入(USDT)', func: 'setMaxDailyBuy', type: 'uint256', help: '一天之内，合约最多花多少USDT来买代币。这是为了防止极端行情下把子弹打光。例如填100000000000000000000（100 USDT）。' },
                     { label: '每日最大卖出(代币)', func: 'setMaxDailySell', type: 'uint256', help: '一天之内，合约最多卖多少个代币。这是为了防止砸盘太猛。注意你的代币精度是10，所以1000个代币要填10000000000000。' },
                     { label: '稳定金库地址', func: 'setStabilityTreasury', type: 'address', help: '护盘卖出代币赚到的USDT，以及惩罚税收到的钱，都会自动转到这个地址。你可以设置成你的基金地址或者另一个专门收钱的地址。' },
@@ -327,11 +334,10 @@
                     { label: '最低保留代币', func: 'setMinTokenReserve', type: 'uint256', help: '合约里的代币如果低于这个数，就不再卖出代币了。这是为了保证合约手里始终有货可以卖。例如填1000000000000（100个代币，精度10）。' },
                     { label: '执行一次护盘', func: 'executeStability', type: 'action', help: '点一下，手动触发一次护盘操作。合约会检查当前价格，如果价格偏低了就买入，价格偏高了就卖出。适合你想主动干预的时候使用。' }
                 ]},
-                // 新增自动惩罚税
+                // 自动惩罚税
                 { title: '⚖️ 自动惩罚税', help: '价格偏离时，对超过数量门槛的大额交易额外收税。', items: [
                     { label: '惩罚税总开关', func: 'setExtraTaxEnabled', type: 'bool', help: '打开后，当价格偏离正常区间，并且单笔交易量超过你设定的数量门槛时，合约会额外征收一笔惩罚税。这笔税是独立于普通买卖税的，相当于“罚款”。参数：true=开启，false=关闭。' },
-                    { label: '触发价格下边缘', func: 'setExtraTaxPriceBounds', type: 'uint256', help: '价格低于这个值时，开始检查是否要征收惩罚税。例如填0.98 USDT（带18个零）。' },
-                    { label: '触发价格上边缘', func: 'setExtraTaxPriceBounds', type: 'uint256', help: '价格高于这个值时，开始检查是否要征收惩罚税。例如填1.02 USDT（带18个零）。' },
+                    { label: '触发价格区间 (如: 0.98,1.02)', func: 'setExtraTaxPriceBounds', type: 'twoUints', help: '设置触发惩罚税的价格区间。输入两个数字，用逗号分隔：下边缘和上边缘。例如：980000000000000000,1020000000000000000。' },
                     { label: '冷却时间(秒)', func: 'setExtraTaxCooldown', type: 'uint256', help: '同一个钱包地址被征收惩罚税后，需要等多久才能被再次惩罚。这是为了防止一个地址在短时间内被反复罚款。例如填3600（1小时）。' },
                     { label: '设置价格阶梯(数组)', func: 'setExtraTaxPriceSteps', type: 'twoArrays', help: '根据价格偏离的程度，设置不同的惩罚税率。格式：[价格阈值1,价格阈值2],[税率1,税率2]。例如：[0.95,0.90],[500,1000] 表示价格低于0.95时额外收5%税，低于0.90时额外收10%税。' },
                     { label: '设置数量阶梯(数组)', func: 'setExtraTaxAmountSteps', type: 'twoArrays', help: '根据单笔交易量的大小，设置不同的惩罚税率。格式：[数量阈值1,数量阈值2],[税率1,税率2]。例如：[1000000000000,5000000000000],[300,800] 表示交易量超过100个代币时额外收3%税，超过500个时额外收8%税。' }
@@ -405,6 +411,9 @@
                     } else if (item.type === 'uint256') {
                         inputHtml = `<input type="text" id="${item.func}_val" placeholder="数字">`;
                         inputHtml += `<button onclick="executeAndRefresh('${item.func}', document.getElementById('${item.func}_val').value)">设置</button>`;
+                    } else if (item.type === 'twoUints') {
+                        inputHtml = `<input type="text" id="${item.func}_val" placeholder="例如: 980000000000000000,1020000000000000000">`;
+                        inputHtml += `<button onclick="handleTwoUintsCall('${item.func}')">设置</button>`;
                     } else if (item.type === 'address') {
                         inputHtml = `<textarea id="${item.func}_val" placeholder="0x..." rows="1"></textarea>`;
                         inputHtml += `<button onclick="executeAndRefresh('${item.func}', document.getElementById('${item.func}_val').value)">设置</button>`;
