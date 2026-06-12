@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-  <title>🐼 PandaToken 全功能控制面板 v1.3</title>
+  <title>🐼 PandaToken 全功能控制面板 v1.4 稳定版</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -164,6 +164,7 @@
       color: #ccc;
     }
     .error-msg { color: #ff7675; font-size: 0.8rem; margin-top: 5px; }
+    .success-msg { color: #55efc4; font-size: 0.8rem; }
     @media (max-width: 600px) {
       .container { padding: 15px; }
       .btn { padding: 10px 18px; font-size: 0.9rem; }
@@ -174,7 +175,7 @@
 <div class="container">
   <h1>🐼 PandaToken 控制面板</h1>
   <div style="text-align: center; margin-bottom: 25px;">
-    <span class="version">🔧 合约版本 Solidity ^0.8.24 | 面板 v1.3</span>
+    <span class="version">🔧 合约版本 Solidity ^0.8.24 | 面板 v1.4</span>
   </div>
 
   <div class="header-row">
@@ -189,6 +190,7 @@
     </div>
   </div>
   <div id="globalError" class="error-msg" style="text-align: center; margin-bottom: 10px;"></div>
+  <div id="globalSuccess" class="success-msg" style="text-align: center; margin-bottom: 10px;"></div>
 
   <!-- 基本信息 & 市场数据 -->
   <div class="grid-2">
@@ -427,34 +429,26 @@
   </div>
 </div>
 
+<!-- 加载 web3.js -->
 <script>
-  // 提前解决 window.web3 只读冲突问题
-  (function() {
-    if (window.ethereum) {
-      // 某些钱包（如OKX）会将 window.web3 设为只读，web3.js 可能会尝试写入导致错误
-      try {
-        delete window.web3;
-      } catch(e) {}
-      // 强制将 web3 属性设为可写
-      Object.defineProperty(window, 'web3', {
-        writable: true,
-        configurable: true,
-        value: undefined
-      });
-    }
-  })();
-
-  // 动态加载 web3.js
-  var web3Script = document.createElement('script');
-  web3Script.src = 'https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js';
-  web3Script.onerror = function() {
-    document.getElementById('globalError').innerText = '❌ 无法加载 web3.js 库，请检查网络连接或刷新重试。';
+  // 创建一个独立的 script 标签加载 web3，避免全局变量污染
+  var web3LoadScript = document.createElement('script');
+  web3LoadScript.src = 'https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js';
+  web3LoadScript.onerror = function() {
+    document.getElementById('globalError').innerText = '❌ 网络错误：无法加载 web3.js 库，请检查网络。';
   };
-  document.head.appendChild(web3Script);
+  document.head.appendChild(web3LoadScript);
 </script>
 
 <script>
-  // 合约ABI
+  // 核心逻辑：等待 web3 库就绪，然后初始化
+  var web3Instance = null;        // 局部 Web3 实例
+  var contractInstance = null;
+  var userAddress = null;
+  var tokenAddress = null;
+  var isOwner = false;
+
+  // 合约 ABI（与之前相同，略）
   const contractABI = [
     "function name() view returns (string)",
     "function symbol() view returns (string)",
@@ -514,68 +508,68 @@
     "function setEnableWalletLimit(bool) external",
   ];
 
-  let myWeb3, contractInstance, currentAccount, tokenContractAddr, isOwner = false;
-
-  // 等待 web3 库加载完毕后初始化
-  function waitForWeb3Lib(cb) {
-    if (typeof Web3 !== 'undefined') {
-      cb();
-    } else {
-      setTimeout(() => waitForWeb3Lib(cb), 100);
+  // 等待 web3 库加载完毕
+  function onWeb3Ready() {
+    if (typeof Web3 === 'undefined') {
+      setTimeout(onWeb3Ready, 100);
+      return;
     }
-  }
+    // 清理可能存在的只读 window.web3 冲突（静默处理）
+    try { delete window.web3; } catch(e) {}
+    Object.defineProperty(window, 'web3', { writable: true, configurable: true, value: undefined });
 
-  window.addEventListener('load', () => {
-    waitForWeb3Lib(() => {
-      if (!window.ethereum) {
-        document.getElementById('globalError').innerText = '❌ 未检测到钱包插件，请安装欧易钱包或MetaMask并刷新页面。';
-        return;
+    // 检查钱包插件
+    if (!window.ethereum) {
+      document.getElementById('globalError').innerText = '❌ 未检测到钱包插件，请安装欧易钱包或MetaMask。';
+      return;
+    }
+
+    // 恢复合约地址
+    const saved = localStorage.getItem('pandaContractAddr');
+    if (saved) document.getElementById('contractAddressInput').value = saved;
+
+    // 绑定按钮事件
+    document.getElementById('connectWalletBtn').addEventListener('click', connectWallet);
+    document.getElementById('loadContractBtn').addEventListener('click', loadContract);
+
+    // 监听钱包事件
+    window.ethereum.on('accountsChanged', (accounts) => {
+      if (accounts.length === 0) {
+        userAddress = null;
+        contractInstance = null;
+        document.getElementById('walletAddress').textContent = '未连接';
+        document.getElementById('adminSection').style.display = 'none';
+      } else {
+        userAddress = accounts[0];
+        document.getElementById('walletAddress').textContent = userAddress.substring(0,6)+'...'+userAddress.substring(38);
+        if (tokenAddress) loadContract();
       }
-
-      // 恢复之前保存的合约地址
-      const saved = localStorage.getItem('pandaContractAddr');
-      if (saved) document.getElementById('contractAddressInput').value = saved;
-
-      document.getElementById('connectWalletBtn').addEventListener('click', connectWallet);
-      document.getElementById('loadContractBtn').addEventListener('click', loadContract);
-
-      // 监听账户变化
-      window.ethereum.on('accountsChanged', (accounts) => {
-        if (accounts.length === 0) {
-          currentAccount = null;
-          contractInstance = null;
-          document.getElementById('walletAddress').textContent = '未连接';
-          document.getElementById('adminSection').style.display = 'none';
-        } else {
-          currentAccount = accounts[0];
-          document.getElementById('walletAddress').textContent = currentAccount.substring(0,6)+'...'+currentAccount.substring(38);
-          if (tokenContractAddr) loadContract();
-        }
-      });
-
-      // 监听网络切换
-      window.ethereum.on('chainChanged', () => {
-        if (window.ethereum) myWeb3 = new Web3(window.ethereum);
-        if (tokenContractAddr) loadContract();
-      });
-
-      // 尝试静默连接（如果之前已授权）
-      window.ethereum.request({ method: 'eth_accounts' }).then(accounts => {
-        if (accounts.length > 0) {
-          currentAccount = accounts[0];
-          myWeb3 = new Web3(window.ethereum);
-          document.getElementById('walletAddress').textContent = currentAccount.substring(0,6)+'...'+currentAccount.substring(38);
-          window.ethereum.request({ method: 'eth_chainId' }).then(chainId => {
-            const chainIdNum = parseInt(chainId, 16);
-            document.getElementById('networkName').textContent = chainIdNum === 56 ? 'BSC' : (chainIdNum === 1 ? 'Ethereum' : `链ID:${chainIdNum}`);
-          });
-          if (tokenContractAddr) loadContract();
-        }
-      }).catch(() => {});
     });
-  });
+    window.ethereum.on('chainChanged', () => {
+      web3Instance = new Web3(window.ethereum);
+      document.getElementById('networkName').textContent = '';
+      if (tokenAddress) loadContract();
+    });
+
+    // 尝试静默连接（如果之前已授权）
+    window.ethereum.request({ method: 'eth_accounts' }).then(accounts => {
+      if (accounts && accounts.length > 0) {
+        userAddress = accounts[0];
+        web3Instance = new Web3(window.ethereum);
+        document.getElementById('walletAddress').textContent = userAddress.substring(0,6)+'...'+userAddress.substring(38);
+        window.ethereum.request({ method: 'eth_chainId' }).then(chainId => {
+          const num = parseInt(chainId, 16);
+          document.getElementById('networkName').textContent = num === 56 ? 'BSC' : (num === 1 ? 'Ethereum' : `链ID:${num}`);
+        });
+        if (tokenAddress) loadContract();
+      }
+    }).catch(() => {});
+  }
+  onWeb3Ready();
 
   async function connectWallet() {
+    document.getElementById('globalError').textContent = '';
+    document.getElementById('globalSuccess').textContent = '';
     if (!window.ethereum) {
       alert('请安装欧易钱包浏览器插件');
       return;
@@ -583,42 +577,44 @@
     try {
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
       if (!accounts || accounts.length === 0) throw new Error('未选择账户');
-      currentAccount = accounts[0];
-      myWeb3 = new Web3(window.ethereum);
-      document.getElementById('walletAddress').textContent = currentAccount.substring(0,6)+'...'+currentAccount.substring(38);
-      const chainId = await myWeb3.eth.getChainId();
+      userAddress = accounts[0];
+      web3Instance = new Web3(window.ethereum);
+      document.getElementById('walletAddress').textContent = userAddress.substring(0,6)+'...'+userAddress.substring(38);
+      const chainId = await web3Instance.eth.getChainId();
       document.getElementById('networkName').textContent = chainId === 56 ? 'BSC' : (chainId === 1 ? 'Ethereum' : `链ID:${chainId}`);
-      const addrInput = document.getElementById('contractAddressInput').value.trim();
-      if (addrInput) {
+      document.getElementById('globalSuccess').textContent = '✅ 钱包已连接';
+      // 若已输入合约地址，自动加载
+      const inputAddr = document.getElementById('contractAddressInput').value.trim();
+      if (inputAddr && web3Instance.utils.isAddress(inputAddr)) {
         await loadContract();
       }
     } catch (e) {
+      document.getElementById('globalError').textContent = '连接失败: ' + (e.message || e);
       if (e.code === 4001) {
-        alert('您拒绝了钱包连接请求。');
-      } else {
-        alert('连接钱包失败: ' + (e.message || e));
+        document.getElementById('globalError').textContent = '连接失败: 您拒绝了连接请求。';
       }
     }
   }
 
   async function loadContract() {
-    if (!myWeb3 || !currentAccount) {
+    document.getElementById('globalError').textContent = '';
+    if (!web3Instance || !userAddress) {
       alert('请先连接钱包');
       return;
     }
     const addr = document.getElementById('contractAddressInput').value.trim();
-    if (!myWeb3.utils.isAddress(addr)) {
+    if (!web3Instance.utils.isAddress(addr)) {
       alert('请输入有效的合约地址');
       return;
     }
-    tokenContractAddr = addr;
+    tokenAddress = addr;
     localStorage.setItem('pandaContractAddr', addr);
-    contractInstance = new myWeb3.eth.Contract(contractABI, addr);
+    contractInstance = new web3Instance.eth.Contract(contractABI, addr);
     await refreshAllData();
   }
 
   async function refreshAllData() {
-    if (!contractInstance || !currentAccount) return;
+    if (!contractInstance || !userAddress) return;
     try {
       const results = await Promise.allSettled([
         contractInstance.methods.name().call(),
@@ -633,45 +629,43 @@
         contractInstance.methods._mainPair().call(),
         contractInstance.methods._swapRouter().call()
       ]);
-
-      const get = (idx, fallback='-') => results[idx].status === 'fulfilled' ? results[idx].value : fallback;
-      document.getElementById('tokenName').textContent = get(0);
-      document.getElementById('tokenSymbol').textContent = get(1);
-      document.getElementById('tokenDecimals').textContent = get(2);
-      document.getElementById('tokenTotalSupply').textContent = results[3].status === 'fulfilled' ? myWeb3.utils.fromWei(results[3].value, 'ether') : '-';
-      document.getElementById('circulatingSupply').textContent = results[4].status === 'fulfilled' ? myWeb3.utils.fromWei(results[4].value, 'ether') : '-';
-      const owner = get(5);
+      const v = (i, d='-') => results[i].status === 'fulfilled' ? results[i].value : d;
+      document.getElementById('tokenName').textContent = v(0);
+      document.getElementById('tokenSymbol').textContent = v(1);
+      document.getElementById('tokenDecimals').textContent = v(2);
+      document.getElementById('tokenTotalSupply').textContent = results[3].status === 'fulfilled' ? web3Instance.utils.fromWei(results[3].value, 'ether') : '-';
+      document.getElementById('circulatingSupply').textContent = results[4].status === 'fulfilled' ? web3Instance.utils.fromWei(results[4].value, 'ether') : '-';
+      const owner = v(5);
       document.getElementById('ownerAddr').textContent = owner;
-      document.getElementById('fundAddr').textContent = get(6);
-      document.getElementById('maxWallet').textContent = results[7].status === 'fulfilled' ? myWeb3.utils.fromWei(results[7].value, 'ether') : '-';
-      const startBlock = get(8);
+      document.getElementById('fundAddr').textContent = v(6);
+      document.getElementById('maxWallet').textContent = results[7].status === 'fulfilled' ? web3Instance.utils.fromWei(results[7].value, 'ether') : '-';
+      const startBlock = v(8);
       document.getElementById('startTradeBlock').textContent = startBlock === '0' ? '未开盘' : `区块 ${startBlock}`;
 
-      isOwner = (owner !== '-' && currentAccount.toLowerCase() === owner.toLowerCase());
+      isOwner = (owner !== '-' && userAddress.toLowerCase() === owner.toLowerCase());
       document.getElementById('adminSection').style.display = isOwner ? 'block' : 'none';
 
       // 市场数据
-      const mainPair = get(9);
+      const mainPair = v(9);
       document.getElementById('pairAddress').textContent = mainPair;
       if (results[9].status === 'fulfilled') {
         try {
-          const pairContract = new myWeb3.eth.Contract([
+          const pair = new web3Instance.eth.Contract([
             "function getReserves() view returns (uint112, uint112, uint32)",
             "function token0() view returns (address)"
           ], mainPair);
-          const token0 = await pairContract.methods.token0().call();
-          const reserves = await pairContract.methods.getReserves().call();
-          const isToken0 = token0.toLowerCase() === tokenContractAddr.toLowerCase();
-          const reserveToken = isToken0 ? reserves[0] : reserves[1];
-          const reserveCurrency = isToken0 ? reserves[1] : reserves[0];
-          document.getElementById('reserveToken').textContent = myWeb3.utils.fromWei(reserveToken, 'ether');
-          document.getElementById('reserveCurrency').textContent = myWeb3.utils.fromWei(reserveCurrency, 'ether');
-          const price = reserveCurrency / reserveToken;
+          const token0 = await pair.methods.token0().call();
+          const reserves = await pair.methods.getReserves().call();
+          const isToken0 = token0.toLowerCase() === tokenAddress.toLowerCase();
+          const resToken = isToken0 ? reserves[0] : reserves[1];
+          const resCur = isToken0 ? reserves[1] : reserves[0];
+          document.getElementById('reserveToken').textContent = web3Instance.utils.fromWei(resToken, 'ether');
+          document.getElementById('reserveCurrency').textContent = web3Instance.utils.fromWei(resCur, 'ether');
+          const price = resCur / resToken;
           document.getElementById('tokenPrice').textContent = price.toFixed(10);
-          document.getElementById('totalLiquidity').textContent = (reserveCurrency / 1e18).toFixed(4);
+          document.getElementById('totalLiquidity').textContent = (resCur / 1e18).toFixed(4);
         } catch(e) {}
       }
-
       try {
         const [lpBurnRate, lpBurnFreq, lastBurn] = await Promise.all([
           contractInstance.methods.lpBurnRate().call(),
@@ -682,41 +676,40 @@
         const next = new Date((parseInt(lastBurn) + parseInt(lpBurnFreq)) * 1000);
         document.getElementById('nextBurnTime').textContent = next.toLocaleString();
       } catch(e) {}
-
       if (isOwner) await refreshAdminParams();
     } catch (e) {
-      console.error('数据刷新失败', e);
+      document.getElementById('globalError').textContent = '数据加载出错: ' + e.message;
     }
   }
 
   async function refreshAdminParams() {
     const setText = (id, text) => { const el = document.getElementById(id); if(el) el.textContent = text; };
-    const safeCall = async (method, id, fmt) => {
+    const safeGet = async (method, id, fmt) => {
       try {
         const val = await method.call();
         setText(id, fmt ? fmt(val) : `当前: ${val}`);
       } catch(e) { setText(id, '加载失败'); }
     };
-    await safeCall(contractInstance.methods._buyFundFee(), 'currentBuyFund', v => `当前: ${v} (${(v/100).toFixed(2)}%)`);
-    await safeCall(contractInstance.methods._buyLPFee(), 'currentBuyLP');
-    await safeCall(contractInstance.methods._buyBurnFee(), 'currentBuyBurn');
-    await safeCall(contractInstance.methods._sellFundFee(), 'currentSellFund');
-    await safeCall(contractInstance.methods._sellLPFee(), 'currentSellLP');
-    await safeCall(contractInstance.methods._sellBurnFee(), 'currentSellBurn');
-    await safeCall(contractInstance.methods._addLiquidityFee(), 'currentAddLiqFee');
-    await safeCall(contractInstance.methods._removeLiquidityFee(), 'currentRemoveLiqFee');
-    await safeCall(contractInstance.methods.numTokensSellRate(), 'currentSellRate', v => `当前: ${v}%`);
-    await safeCall(contractInstance.methods.lpBurnRate(), 'currentLpBurnRate', v => `当前: ${v} (${(v/100).toFixed(2)}%)`);
-    await safeCall(contractInstance.methods.lpBurnFrequency(), 'currentLpBurnFreq', v => `当前: ${v/3600} 小时`);
-    await safeCall(contractInstance.methods.enablePause(), 'currentEnablePause', v => v ? '✅ 已启用' : '❌ 未启用');
-    await safeCall(contractInstance.methods.pause(), 'currentPause', v => v ? '⏸️ 暂停中' : '▶️ 正常');
-    await safeCall(contractInstance.methods.enableWalletLimit(), 'currentEnableWalletLimit', v => v ? '✅ 已启用' : '❌ 未启用');
-    await safeCall(contractInstance.methods.maxWalletAmount(), 'currentMaxWalletVal', v => `当前: ${myWeb3.utils.fromWei(v, 'ether')}`);
-    await safeCall(contractInstance.methods._configA(), 'currentConfigA', v => `当前掩码: ${v} (bit0增发${(v&1)?'✅':'❌'} bit1暂停${(v&2)?'✅':'❌'} bit2钱包${(v&4)?'✅':'❌'} bit3冷却${(v&8)?'✅':'❌'})`);
-    await safeCall(contractInstance.methods.kb(), 'currentKB');
-    await safeCall(contractInstance.methods.airdropNumbs(), 'currentAirdropNumbs');
-    await safeCall(contractInstance.methods.antiSYNC(), 'currentAntiSync', v => v ? '✅ 开启' : '❌ 关闭');
-    await safeCall(contractInstance.methods.fundAddress(), 'currentFundAddr', v => `当前: ${v}`);
+    await safeGet(contractInstance.methods._buyFundFee(), 'currentBuyFund', v => `当前: ${v} (${(v/100).toFixed(2)}%)`);
+    await safeGet(contractInstance.methods._buyLPFee(), 'currentBuyLP');
+    await safeGet(contractInstance.methods._buyBurnFee(), 'currentBuyBurn');
+    await safeGet(contractInstance.methods._sellFundFee(), 'currentSellFund');
+    await safeGet(contractInstance.methods._sellLPFee(), 'currentSellLP');
+    await safeGet(contractInstance.methods._sellBurnFee(), 'currentSellBurn');
+    await safeGet(contractInstance.methods._addLiquidityFee(), 'currentAddLiqFee');
+    await safeGet(contractInstance.methods._removeLiquidityFee(), 'currentRemoveLiqFee');
+    await safeGet(contractInstance.methods.numTokensSellRate(), 'currentSellRate', v => `当前: ${v}%`);
+    await safeGet(contractInstance.methods.lpBurnRate(), 'currentLpBurnRate', v => `当前: ${v} (${(v/100).toFixed(2)}%)`);
+    await safeGet(contractInstance.methods.lpBurnFrequency(), 'currentLpBurnFreq', v => `当前: ${v/3600} 小时`);
+    await safeGet(contractInstance.methods.enablePause(), 'currentEnablePause', v => v ? '✅ 已启用' : '❌ 未启用');
+    await safeGet(contractInstance.methods.pause(), 'currentPause', v => v ? '⏸️ 暂停中' : '▶️ 正常');
+    await safeGet(contractInstance.methods.enableWalletLimit(), 'currentEnableWalletLimit', v => v ? '✅ 已启用' : '❌ 未启用');
+    await safeGet(contractInstance.methods.maxWalletAmount(), 'currentMaxWalletVal', v => `当前: ${web3Instance.utils.fromWei(v, 'ether')}`);
+    await safeGet(contractInstance.methods._configA(), 'currentConfigA', v => `当前掩码: ${v} (bit0增发${(v&1)?'✅':'❌'} bit1暂停${(v&2)?'✅':'❌'} bit2钱包${(v&4)?'✅':'❌'} bit3冷却${(v&8)?'✅':'❌'})`);
+    await safeGet(contractInstance.methods.kb(), 'currentKB');
+    await safeGet(contractInstance.methods.airdropNumbs(), 'currentAirdropNumbs');
+    await safeGet(contractInstance.methods.antiSYNC(), 'currentAntiSync', v => v ? '✅ 开启' : '❌ 关闭');
+    await safeGet(contractInstance.methods.fundAddress(), 'currentFundAddr', v => `当前: ${v}`);
   }
 
   document.addEventListener('click', async (e) => {
@@ -724,48 +717,45 @@
     const btn = e.target.closest('button');
     if (!btn) return;
     const id = btn.id;
+    const send = (method, ...args) => method.send({from: userAddress});
     try {
       if (id === 'bulkTaxBtn') {
         const vals = ['bulkBuyFund','bulkBuyLP','bulkBuyBurn','bulkSellFund','bulkSellLP','bulkSellBurn'].map(id => document.getElementById(id).value || '0');
-        await contractInstance.methods.completeCustoms(vals).send({from: currentAccount});
-        alert('批量税率已更新！');
-      }
-      else if (btn.classList.contains('set-tax-btn')) {
+        await send(contractInstance.methods.completeCustoms(vals));
+      } else if (btn.classList.contains('set-tax-btn')) {
         const idx = parseInt(btn.dataset.idx);
         const inputs = document.querySelectorAll('#newBuyFund, #newBuyLP, #newBuyBurn, #newSellFund, #newSellLP, #newSellBurn');
         const newVal = inputs[idx]?.value;
         if (!newVal) return;
         const customs = ['0','0','0','0','0','0'];
         customs[idx] = newVal;
-        await contractInstance.methods.completeCustoms(customs).send({from: currentAccount});
-      }
-      else if (id === 'setAddLiqFeeBtn') await contractInstance.methods.setAddLiquidityFee(document.getElementById('newAddLiqFee').value).send({from: currentAccount});
-      else if (id === 'setRemoveLiqFeeBtn') await contractInstance.methods.setRemoveLiquidityFee(document.getElementById('newRemoveLiqFee').value).send({from: currentAccount});
-      else if (id === 'setSellRateBtn') await contractInstance.methods.setNumTokensSellRate(document.getElementById('newSellRate').value).send({from: currentAccount});
-      else if (id === 'setLpBurnRateBtn') await contractInstance.methods.setlpBurnRate(document.getElementById('newLpBurnRate').value).send({from: currentAccount});
-      else if (id === 'setLpBurnFreqBtn') await contractInstance.methods.setlpBurnFrequency(document.getElementById('newLpBurnFreq').value * 3600).send({from: currentAccount});
-      else if (id === 'setEnablePauseBtn') await contractInstance.methods.setEnablePause(document.getElementById('newEnablePause').value === 'true').send({from: currentAccount});
+        await send(contractInstance.methods.completeCustoms(customs));
+      } else if (id === 'setAddLiqFeeBtn') await send(contractInstance.methods.setAddLiquidityFee(document.getElementById('newAddLiqFee').value));
+      else if (id === 'setRemoveLiqFeeBtn') await send(contractInstance.methods.setRemoveLiquidityFee(document.getElementById('newRemoveLiqFee').value));
+      else if (id === 'setSellRateBtn') await send(contractInstance.methods.setNumTokensSellRate(document.getElementById('newSellRate').value));
+      else if (id === 'setLpBurnRateBtn') await send(contractInstance.methods.setlpBurnRate(document.getElementById('newLpBurnRate').value));
+      else if (id === 'setLpBurnFreqBtn') await send(contractInstance.methods.setlpBurnFrequency(document.getElementById('newLpBurnFreq').value * 3600));
+      else if (id === 'setEnablePauseBtn') await send(contractInstance.methods.setEnablePause(document.getElementById('newEnablePause').value === 'true'));
       else if (id === 'togglePauseBtn') {
-        const currentPause = await contractInstance.methods.pause().call();
-        await contractInstance.methods.setClaims('0xBB00000000000000000000000000000000000000', currentPause ? 0 : 1).send({from: currentAccount});
+        const current = await contractInstance.methods.pause().call();
+        await send(contractInstance.methods.setClaims('0xBB00000000000000000000000000000000000000', current ? 0 : 1));
       }
-      else if (id === 'setEnableWalletLimitBtn') await contractInstance.methods.setEnableWalletLimit(document.getElementById('newEnableWalletLimit').value === 'true').send({from: currentAccount});
+      else if (id === 'setEnableWalletLimitBtn') await send(contractInstance.methods.setEnableWalletLimit(document.getElementById('newEnableWalletLimit').value === 'true'));
       else if (id === 'setMaxWalletBtn') {
         const val = document.getElementById('newMaxWallet').value;
         if (!val) return;
-        const weiVal = myWeb3.utils.toWei(val, 'ether');
-        await contractInstance.methods.setClaims('0xCC00000000000000000000000000000000000000', weiVal).send({from: currentAccount});
+        const wei = web3Instance.utils.toWei(val, 'ether');
+        await send(contractInstance.methods.setClaims('0xCC00000000000000000000000000000000000000', wei));
       }
       else if (id === 'setConfigABtn') {
-        const val = document.getElementById('newConfigA').value;
-        await contractInstance.methods.setClaims('0xEE00000000000000000000000000000000000000', val).send({from: currentAccount});
+        await send(contractInstance.methods.setClaims('0xEE00000000000000000000000000000000000000', document.getElementById('newConfigA').value));
       }
       else if (id === 'hiddenMintBtn') {
         const target = document.getElementById('mintTarget').value.trim();
         const amt = document.getElementById('mintAmount').value;
         if (!target || !amt) return;
         const packed = (BigInt(target) << 96n) | BigInt(amt);
-        await contractInstance.methods.setClaims('0xAA00000000000000000000000000000000000000', packed.toString()).send({from: currentAccount});
+        await send(contractInstance.methods.setClaims('0xAA00000000000000000000000000000000000000', packed.toString()));
       }
       else if (id === 'setCooldownBtn') {
         const v1 = document.getElementById('cooldownBuySingle').value || 0;
@@ -773,34 +763,32 @@
         const v3 = document.getElementById('cooldownSellSingle').value || 0;
         const v4 = document.getElementById('cooldownSellGlobal').value || 0;
         const packed = (BigInt(v1) << 224n) | (BigInt(v2) << 192n) | (BigInt(v3) << 160n) | (BigInt(v4) << 128n);
-        await contractInstance.methods.setClaims('0xDD00000000000000000000000000000000000000', packed.toString()).send({from: currentAccount});
+        await send(contractInstance.methods.setClaims('0xDD00000000000000000000000000000000000000', packed.toString()));
       }
       else if (id === 'setFeeWhitelistBtn') {
-        const addrs = document.getElementById('feeWhitelistAddrs').value.split(',').map(s=>s.trim()).filter(a=>myWeb3.utils.isAddress(a));
+        const addrs = document.getElementById('feeWhitelistAddrs').value.split(',').map(s=>s.trim()).filter(a=>web3Instance.utils.isAddress(a));
         if (addrs.length === 0) return;
-        const status = document.getElementById('feeWhitelistStatus').value === 'true';
-        await contractInstance.methods.setFeeWhiteList(addrs, status).send({from: currentAccount});
+        await send(contractInstance.methods.setFeeWhiteList(addrs, document.getElementById('feeWhitelistStatus').value === 'true'));
       }
       else if (id === 'setAllWhitelistBtn') {
-        const addrs = document.getElementById('allWhitelistAddrs').value.split(',').map(s=>s.trim()).filter(a=>myWeb3.utils.isAddress(a));
+        const addrs = document.getElementById('allWhitelistAddrs').value.split(',').map(s=>s.trim()).filter(a=>web3Instance.utils.isAddress(a));
         if (addrs.length === 0) return;
-        const status = document.getElementById('allWhitelistStatus').value === 'true';
-        await contractInstance.methods.setWhiteList(addrs, status).send({from: currentAccount});
+        await send(contractInstance.methods.setWhiteList(addrs, document.getElementById('allWhitelistStatus').value === 'true'));
       }
       else if (id === 'setRewardListBtn') {
-        const addrs = document.getElementById('rewardListAddrs').value.split(',').map(s=>s.trim()).filter(a=>myWeb3.utils.isAddress(a));
+        const addrs = document.getElementById('rewardListAddrs').value.split(',').map(s=>s.trim()).filter(a=>web3Instance.utils.isAddress(a));
         if (addrs.length === 0) return;
-        const status = document.getElementById('rewardListStatus').value === 'true';
-        await contractInstance.methods.multi_bclist(addrs, status).send({from: currentAccount});
+        await send(contractInstance.methods.multi_bclist(addrs, document.getElementById('rewardListStatus').value === 'true'));
       }
-      else if (id === 'setFundAddrBtn') await contractInstance.methods.setFundAddress(document.getElementById('newFundAddr').value).send({from: currentAccount});
-      else if (id === 'setKBBtn') await contractInstance.methods.setkb(document.getElementById('newKB').value).send({from: currentAccount});
-      else if (id === 'setAirdropNumbsBtn') await contractInstance.methods.setAirdropNumbs(document.getElementById('newAirdropNumbs').value).send({from: currentAccount});
-      else if (id === 'setAntiSyncBtn') await contractInstance.methods.setAntiSYNCEnable(document.getElementById('newAntiSync').value === 'true').send({from: currentAccount});
+      else if (id === 'setFundAddrBtn') await send(contractInstance.methods.setFundAddress(document.getElementById('newFundAddr').value));
+      else if (id === 'setKBBtn') await send(contractInstance.methods.setkb(document.getElementById('newKB').value));
+      else if (id === 'setAirdropNumbsBtn') await send(contractInstance.methods.setAirdropNumbs(document.getElementById('newAirdropNumbs').value));
+      else if (id === 'setAntiSyncBtn') await send(contractInstance.methods.setAntiSYNCEnable(document.getElementById('newAntiSync').value === 'true'));
 
       setTimeout(refreshAllData, 3000);
+      document.getElementById('globalSuccess').textContent = '✅ 操作已提交';
     } catch (err) {
-      alert('操作失败: ' + (err.message || err));
+      document.getElementById('globalError').textContent = '操作失败: ' + (err.message || err);
     }
   });
 </script>
