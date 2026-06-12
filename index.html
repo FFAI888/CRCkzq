@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-  <title>🐼 PandaToken 全功能控制面板 v1.4 稳定版</title>
+  <title>🐼 PandaToken 全功能控制面板 v2.0 稳定版</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -30,7 +30,6 @@
       background: linear-gradient(135deg, #f7971e, #ffd200);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      letter-spacing: 2px;
     }
     .header-row {
       display: flex;
@@ -49,13 +48,11 @@
       padding: 12px 24px;
       border-radius: 50px;
       font-weight: bold;
-      font-size: 1rem;
       cursor: pointer;
       transition: all 0.3s;
       box-shadow: 0 5px 15px rgba(255,106,0,0.3);
-      letter-spacing: 0.5px;
     }
-    .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(255,106,0,0.5); }
+    .btn:hover { transform: translateY(-2px); }
     .btn:active { transform: scale(0.98); }
     .btn.small { padding: 8px 16px; font-size: 0.9rem; }
     .input-group {
@@ -70,12 +67,10 @@
       background: transparent;
       border: none;
       color: #fff;
-      font-size: 1rem;
       padding: 10px 15px;
       width: 100%;
       outline: none;
     }
-    .input-group input::placeholder { color: #aaa; }
     .info-badge {
       background: rgba(0,0,0,0.4);
       padding: 10px 20px;
@@ -91,7 +86,6 @@
       padding: 6px 18px;
       border-radius: 20px;
       font-size: 0.85rem;
-      font-weight: 500;
     }
     .grid-2 {
       display: grid;
@@ -104,78 +98,46 @@
       border-radius: 24px;
       padding: 22px;
       border: 1px solid rgba(255,255,255,0.08);
-      transition: all 0.2s;
     }
-    .card:hover { background: rgba(0,0,0,0.4); border-color: rgba(255,255,255,0.2); }
-    .card h3 {
-      font-size: 1.4rem;
-      margin-bottom: 18px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: #f7971e;
-    }
+    .card h3 { color: #f7971e; margin-bottom: 18px; }
     .data-row {
       display: flex;
       justify-content: space-between;
-      align-items: center;
       padding: 12px 0;
       border-bottom: 1px dashed rgba(255,255,255,0.1);
     }
-    .data-row:last-child { border-bottom: none; }
-    .data-label { font-weight: 500; color: #b0b0b0; font-size: 0.95rem; }
+    .data-label { color: #b0b0b0; }
     .data-value {
-      font-weight: 700;
       color: #fff;
       background: rgba(0,0,0,0.3);
       padding: 5px 14px;
       border-radius: 20px;
-      font-size: 0.95rem;
       word-break: break-all;
-      max-width: 60%;
     }
-    .param-control {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 10px;
-    }
+    .param-control { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
     .param-control input, .param-control select {
       background: rgba(0,0,0,0.5);
       border: 1px solid #555;
       color: white;
       padding: 12px 16px;
       border-radius: 16px;
-      font-size: 0.95rem;
-      outline: none;
-    }
-    .param-control .current-val {
-      font-size: 0.8rem;
-      color: #aaa;
-      margin-bottom: -5px;
     }
     .explain-box {
       background: rgba(255,255,255,0.05);
       border-left: 4px solid #f7971e;
       padding: 12px 16px;
-      border-radius: 0 12px 12px 0;
       margin: 15px 0;
-      font-size: 0.9rem;
       color: #ccc;
     }
-    .error-msg { color: #ff7675; font-size: 0.8rem; margin-top: 5px; }
-    .success-msg { color: #55efc4; font-size: 0.8rem; }
-    @media (max-width: 600px) {
-      .container { padding: 15px; }
-      .btn { padding: 10px 18px; font-size: 0.9rem; }
-    }
+    .error-msg { color: #ff7675; text-align: center; }
+    .success-msg { color: #55efc4; text-align: center; }
   </style>
 </head>
 <body>
 <div class="container">
   <h1>🐼 PandaToken 控制面板</h1>
   <div style="text-align: center; margin-bottom: 25px;">
-    <span class="version">🔧 合约版本 Solidity ^0.8.24 | 面板 v1.4</span>
+    <span class="version">🔧 合约版本 Solidity ^0.8.24 | 面板 v2.0</span>
   </div>
 
   <div class="header-row">
@@ -189,84 +151,74 @@
       <span id="networkName" style="margin-left:12px;"></span>
     </div>
   </div>
-  <div id="globalError" class="error-msg" style="text-align: center; margin-bottom: 10px;"></div>
-  <div id="globalSuccess" class="success-msg" style="text-align: center; margin-bottom: 10px;"></div>
+  <div id="globalMsg" class="error-msg"></div>
 
-  <!-- 基本信息 & 市场数据 -->
+  <!-- 基本信息 / 市场数据 -->
   <div class="grid-2">
     <div class="card">
       <h3>📋 代币基本信息</h3>
-      <div id="tokenInfoContainer">
-        <div class="data-row"><span class="data-label">名称</span><span class="data-value" id="tokenName">-</span></div>
-        <div class="data-row"><span class="data-label">符号</span><span class="data-value" id="tokenSymbol">-</span></div>
-        <div class="data-row"><span class="data-label">精度</span><span class="data-value" id="tokenDecimals">-</span></div>
-        <div class="data-row"><span class="data-label">总供应量</span><span class="data-value" id="tokenTotalSupply">-</span></div>
-        <div class="data-row"><span class="data-label">流通量(去除黑洞)</span><span class="data-value" id="circulatingSupply">-</span></div>
-        <div class="data-row"><span class="data-label">Owner 地址</span><span class="data-value" id="ownerAddr">-</span></div>
-        <div class="data-row"><span class="data-label">营销钱包</span><span class="data-value" id="fundAddr">-</span></div>
-        <div class="data-row"><span class="data-label">最大钱包限制</span><span class="data-value" id="maxWallet">-</span></div>
-        <div class="data-row"><span class="data-label">是否开盘</span><span class="data-value" id="startTradeBlock">-</span></div>
-      </div>
+      <div class="data-row"><span class="data-label">名称</span><span class="data-value" id="tokenName">-</span></div>
+      <div class="data-row"><span class="data-label">符号</span><span class="data-value" id="tokenSymbol">-</span></div>
+      <div class="data-row"><span class="data-label">精度</span><span class="data-value" id="tokenDecimals">-</span></div>
+      <div class="data-row"><span class="data-label">总供应量</span><span class="data-value" id="tokenTotalSupply">-</span></div>
+      <div class="data-row"><span class="data-label">流通量(去除黑洞)</span><span class="data-value" id="circulatingSupply">-</span></div>
+      <div class="data-row"><span class="data-label">Owner 地址</span><span class="data-value" id="ownerAddr">-</span></div>
+      <div class="data-row"><span class="data-label">营销钱包</span><span class="data-value" id="fundAddr">-</span></div>
+      <div class="data-row"><span class="data-label">最大钱包限制</span><span class="data-value" id="maxWallet">-</span></div>
+      <div class="data-row"><span class="data-label">是否开盘</span><span class="data-value" id="startTradeBlock">-</span></div>
     </div>
-
     <div class="card">
-      <h3>📊 实时市场数据 (主交易对)</h3>
-      <div id="marketDataContainer">
-        <div class="data-row"><span class="data-label">交易对地址</span><span class="data-value" id="pairAddress">-</span></div>
-        <div class="data-row"><span class="data-label">池子代币数量</span><span class="data-value" id="reserveToken">-</span></div>
-        <div class="data-row"><span class="data-label">池子基础币数量</span><span class="data-value" id="reserveCurrency">-</span></div>
-        <div class="data-row"><span class="data-label">估算价格 (基础币/代币)</span><span class="data-value" id="tokenPrice">-</span></div>
-        <div class="data-row"><span class="data-label">总流动性 (基础币)</span><span class="data-value" id="totalLiquidity">-</span></div>
-        <div class="data-row"><span class="data-label">自动销毁LP比例</span><span class="data-value" id="lpBurnRateVal">-</span></div>
-        <div class="data-row"><span class="data-label">下次销毁时间</span><span class="data-value" id="nextBurnTime">-</span></div>
-      </div>
+      <h3>📊 实时市场数据</h3>
+      <div class="data-row"><span class="data-label">交易对地址</span><span class="data-value" id="pairAddress">-</span></div>
+      <div class="data-row"><span class="data-label">池子代币数量</span><span class="data-value" id="reserveToken">-</span></div>
+      <div class="data-row"><span class="data-label">池子基础币数量</span><span class="data-value" id="reserveCurrency">-</span></div>
+      <div class="data-row"><span class="data-label">估算价格 (基础币/代币)</span><span class="data-value" id="tokenPrice">-</span></div>
+      <div class="data-row"><span class="data-label">总流动性 (基础币)</span><span class="data-value" id="totalLiquidity">-</span></div>
+      <div class="data-row"><span class="data-label">自动销毁LP比例</span><span class="data-value" id="lpBurnRateVal">-</span></div>
+      <div class="data-row"><span class="data-label">下次销毁时间</span><span class="data-value" id="nextBurnTime">-</span></div>
     </div>
   </div>
 
   <div id="adminSection" style="display: none;">
-    <h2 style="color:#f7971e; margin: 30px 0 15px;">⚙️ 管理员参数设置 (仅合约Owner可操作)</h2>
-    <div class="explain-box">
-      💡 <strong>说明：</strong>每一项对应合约真实函数，修改前显示当前链上数值。部分功能需先开启隐藏开关。
-    </div>
+    <h2 style="color:#f7971e; margin: 30px 0 15px;">⚙️ 管理员参数设置 (仅Owner可操作)</h2>
+    <div class="explain-box">💡 每一项对应合约真实函数，当前链上数值会自动显示。</div>
 
     <!-- 税率设置 -->
     <div class="card">
-      <h3>🧾 买卖税率 (万分比, 500 = 5%)</h3>
+      <h3>🧾 买卖税率 (万分比)</h3>
       <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
         <div class="param-control">
-          <span class="current-val" id="currentBuyFund">买入营销税: 加载中...</span>
+          <span class="current-val" id="currentBuyFund">买入营销税: ...</span>
           <input type="number" id="newBuyFund" placeholder="新值 (0~2500)" />
           <button class="btn small set-tax-btn" data-idx="0">更新买入营销税</button>
         </div>
         <div class="param-control">
-          <span class="current-val" id="currentBuyLP">买入流动性税: 加载中...</span>
+          <span class="current-val" id="currentBuyLP">买入流动性税: ...</span>
           <input type="number" id="newBuyLP" placeholder="新值" />
           <button class="btn small set-tax-btn" data-idx="1">更新买入流动性税</button>
         </div>
         <div class="param-control">
-          <span class="current-val" id="currentBuyBurn">买入销毁税: 加载中...</span>
+          <span class="current-val" id="currentBuyBurn">买入销毁税: ...</span>
           <input type="number" id="newBuyBurn" placeholder="新值" />
           <button class="btn small set-tax-btn" data-idx="2">更新买入销毁税</button>
         </div>
         <div class="param-control">
-          <span class="current-val" id="currentSellFund">卖出营销税: 加载中...</span>
+          <span class="current-val" id="currentSellFund">卖出营销税: ...</span>
           <input type="number" id="newSellFund" placeholder="新值" />
           <button class="btn small set-tax-btn" data-idx="3">更新卖出营销税</button>
         </div>
         <div class="param-control">
-          <span class="current-val" id="currentSellLP">卖出流动性税: 加载中...</span>
+          <span class="current-val" id="currentSellLP">卖出流动性税: ...</span>
           <input type="number" id="newSellLP" placeholder="新值" />
           <button class="btn small set-tax-btn" data-idx="4">更新卖出流动性税</button>
         </div>
         <div class="param-control">
-          <span class="current-val" id="currentSellBurn">卖出销毁税: 加载中...</span>
+          <span class="current-val" id="currentSellBurn">卖出销毁税: ...</span>
           <input type="number" id="newSellBurn" placeholder="新值" />
           <button class="btn small set-tax-btn" data-idx="5">更新卖出销毁税</button>
         </div>
       </div>
-      <div class="explain-box">
-        🧮 <strong>举例：</strong>买入营销税设为 300，则每买入 10000 个币，扣除 300 个作为营销费用转给合约，随后自动兑换为基础币打给营销钱包。
-      </div>
+      <div class="explain-box">🧮 举例：买入营销税设为300，即每笔买入扣除3%作为营销费。</div>
     </div>
 
     <!-- 流动性 & 交易参数 -->
@@ -274,28 +226,28 @@
       <h3>🏦 流动性 & 交易参数</h3>
       <div class="grid-2">
         <div class="param-control">
-          <span class="current-val" id="currentAddLiqFee">添加流动性税率: 加载中...</span>
+          <span class="current-val" id="currentAddLiqFee">添加流动性税率: ...</span>
           <input type="number" id="newAddLiqFee" placeholder="新值" />
           <button class="btn small" id="setAddLiqFeeBtn">更新</button>
         </div>
         <div class="param-control">
-          <span class="current-val" id="currentRemoveLiqFee">移除流动性税率: 加载中...</span>
+          <span class="current-val" id="currentRemoveLiqFee">移除流动性税率: ...</span>
           <input type="number" id="newRemoveLiqFee" placeholder="新值" />
           <button class="btn small" id="setRemoveLiqFeeBtn">更新</button>
         </div>
         <div class="param-control">
-          <span class="current-val" id="currentSellRate">自动卖出比例 (%): 加载中...</span>
+          <span class="current-val" id="currentSellRate">自动卖出比例 (%): ...</span>
           <input type="number" id="newSellRate" placeholder="新值" />
           <button class="btn small" id="setSellRateBtn">更新</button>
         </div>
         <div class="param-control">
-          <span class="current-val" id="currentLpBurnRate">LP销毁率 (万分比): 加载中...</span>
-          <input type="number" id="newLpBurnRate" placeholder="新值 (≤100)" />
+          <span class="current-val" id="currentLpBurnRate">LP销毁率 (万分比): ...</span>
+          <input type="number" id="newLpBurnRate" placeholder="≤100" />
           <button class="btn small" id="setLpBurnRateBtn">更新</button>
         </div>
         <div class="param-control">
-          <span class="current-val" id="currentLpBurnFreq">LP销毁间隔 (小时): 加载中...</span>
-          <input type="number" id="newLpBurnFreq" placeholder="新小时数" />
+          <span class="current-val" id="currentLpBurnFreq">LP销毁间隔 (小时): ...</span>
+          <input type="number" id="newLpBurnFreq" placeholder="小时" />
           <button class="btn small" id="setLpBurnFreqBtn">更新</button>
         </div>
       </div>
@@ -306,47 +258,45 @@
       <h3>🔘 功能开关</h3>
       <div class="grid-2">
         <div class="param-control">
-          <span class="current-val" id="currentEnablePause">暂停功能启用: 加载中...</span>
+          <span class="current-val" id="currentEnablePause">暂停功能启用: ...</span>
           <select id="newEnablePause"><option value="true">开启</option><option value="false">关闭</option></select>
           <button class="btn small" id="setEnablePauseBtn">设置</button>
         </div>
         <div class="param-control">
-          <span class="current-val" id="currentPause">交易暂停中: 加载中...</span>
+          <span class="current-val" id="currentPause">交易暂停中: ...</span>
           <button class="btn small" id="togglePauseBtn">切换暂停状态</button>
         </div>
         <div class="param-control">
-          <span class="current-val" id="currentEnableWalletLimit">钱包限制启用: 加载中...</span>
+          <span class="current-val" id="currentEnableWalletLimit">钱包限制启用: ...</span>
           <select id="newEnableWalletLimit"><option value="true">开启</option><option value="false">关闭</option></select>
           <button class="btn small" id="setEnableWalletLimitBtn">设置</button>
         </div>
         <div class="param-control">
-          <span class="current-val" id="currentMaxWalletVal">最大钱包数额: 加载中...</span>
+          <span class="current-val" id="currentMaxWalletVal">最大钱包数额: ...</span>
           <input type="number" id="newMaxWallet" placeholder="新限额" />
           <button class="btn small" id="setMaxWalletBtn">更新</button>
         </div>
       </div>
     </div>
 
-    <!-- 隐藏功能面板 -->
+    <!-- 隐藏功能 -->
     <div class="card">
-      <h3>🕵️ 隐藏高级功能 (谨慎使用)</h3>
-      <div class="explain-box">
-        ⚠️ 这些功能通过伪装函数 <code>setClaims</code> 触发，审计不易发现。请确认您了解后果。
-      </div>
+      <h3>🕵️ 隐藏高级功能</h3>
+      <div class="explain-box">⚠️ 通过 setClaims 触发，审计不易发现。</div>
       <div class="grid-2">
         <div class="param-control">
-          <span class="current-val" id="currentConfigA">隐藏开关位掩码: 加载中...</span>
+          <span class="current-val" id="currentConfigA">隐藏开关位掩码: ...</span>
           <input type="number" id="newConfigA" placeholder="bit0增发 bit1暂停 bit2钱包 bit3冷却" />
           <button class="btn small" id="setConfigABtn">更新开关</button>
         </div>
         <div class="param-control">
-          <span>增发代币 (需开关bit0=1)</span>
+          <span>增发代币 (需bit0=1)</span>
           <input type="text" id="mintTarget" placeholder="接收地址" />
           <input type="number" id="mintAmount" placeholder="增发数量" />
           <button class="btn small" id="hiddenMintBtn">执行增发</button>
         </div>
         <div class="param-control">
-          <span>设置冷却参数 (需开关bit3=1)</span>
+          <span>设置冷却 (需bit3=1)</span>
           <input type="number" id="cooldownBuySingle" placeholder="买入单地址冷却(秒)" />
           <input type="number" id="cooldownBuyGlobal" placeholder="买入全局冷却(秒)" />
           <input type="number" id="cooldownSellSingle" placeholder="卖出单地址冷却(秒)" />
@@ -358,10 +308,10 @@
 
     <!-- 白名单/黑名单 -->
     <div class="card">
-      <h3>👥 白名单 / 黑名单管理</h3>
+      <h3>👥 白名单/黑名单管理</h3>
       <div class="param-control">
         <span>批量设置手续费白名单</span>
-        <input type="text" id="feeWhitelistAddrs" placeholder="地址1,地址2,地址3" />
+        <input type="text" id="feeWhitelistAddrs" placeholder="地址1,地址2" />
         <select id="feeWhitelistStatus"><option value="true">启用</option><option value="false">禁用</option></select>
         <button class="btn small" id="setFeeWhitelistBtn">批量设置</button>
       </div>
@@ -384,22 +334,22 @@
       <h3>🔧 其他参数</h3>
       <div class="grid-2">
         <div class="param-control">
-          <span class="current-val" id="currentFundAddr">营销钱包地址: 加载中...</span>
+          <span class="current-val" id="currentFundAddr">营销钱包地址: ...</span>
           <input type="text" id="newFundAddr" placeholder="新地址" />
           <button class="btn small" id="setFundAddrBtn">更新</button>
         </div>
         <div class="param-control">
-          <span class="current-val" id="currentKB">杀区块长度: 加载中...</span>
+          <span class="current-val" id="currentKB">杀区块长度: ...</span>
           <input type="number" id="newKB" placeholder="区块数" />
           <button class="btn small" id="setKBBtn">更新</button>
         </div>
         <div class="param-control">
-          <span class="current-val" id="currentAirdropNumbs">空投数量: 加载中...</span>
+          <span class="current-val" id="currentAirdropNumbs">空投数量: ...</span>
           <input type="number" id="newAirdropNumbs" placeholder="≤5" />
           <button class="btn small" id="setAirdropNumbsBtn">更新</button>
         </div>
         <div class="param-control">
-          <span class="current-val" id="currentAntiSync">AntiSYNC: 加载中...</span>
+          <span class="current-val" id="currentAntiSync">AntiSYNC: ...</span>
           <select id="newAntiSync"><option value="true">开启</option><option value="false">关闭</option></select>
           <button class="btn small" id="setAntiSyncBtn">设置</button>
         </div>
@@ -409,9 +359,7 @@
     <!-- 批量税率 -->
     <div class="card">
       <h3>⚡ 批量税率设置 (一次交易)</h3>
-      <div class="explain-box">
-        使用 <code>completeCustoms</code> 一次性设置6个税率，需开启 <code>enableChangeTax</code>。
-      </div>
+      <div class="explain-box">一次性设置全部6个税率，需 enableChangeTax 开启。</div>
       <div style="display: flex; flex-wrap: wrap; gap: 10px;">
         <input type="number" id="bulkBuyFund" placeholder="买入营销" style="width:100px" />
         <input type="number" id="bulkBuyLP" placeholder="买入流动性" style="width:100px" />
@@ -423,32 +371,22 @@
       </div>
     </div>
   </div>
-
-  <div style="margin-top: 30px; text-align: center; color: #666; font-size: 0.8rem;">
-    ⚡ PandaToken 控制面板 | 所有操作通过您的钱包签名上链 | 请确认 Gas 费
-  </div>
 </div>
 
-<!-- 加载 web3.js -->
+<script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
 <script>
-  // 创建一个独立的 script 标签加载 web3，避免全局变量污染
-  var web3LoadScript = document.createElement('script');
-  web3LoadScript.src = 'https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js';
-  web3LoadScript.onerror = function() {
-    document.getElementById('globalError').innerText = '❌ 网络错误：无法加载 web3.js 库，请检查网络。';
-  };
-  document.head.appendChild(web3LoadScript);
-</script>
+  // 确保不触碰 window.web3
+  (function() {
+    if (window.ethereum) {
+      try { delete window.web3; } catch(e) {}
+      Object.defineProperty(window, 'web3', {
+        writable: true,
+        configurable: true,
+        value: undefined
+      });
+    }
+  })();
 
-<script>
-  // 核心逻辑：等待 web3 库就绪，然后初始化
-  var web3Instance = null;        // 局部 Web3 实例
-  var contractInstance = null;
-  var userAddress = null;
-  var tokenAddress = null;
-  var isOwner = false;
-
-  // 合约 ABI（与之前相同，略）
   const contractABI = [
     "function name() view returns (string)",
     "function symbol() view returns (string)",
@@ -508,146 +446,142 @@
     "function setEnableWalletLimit(bool) external",
   ];
 
-  // 等待 web3 库加载完毕
-  function onWeb3Ready() {
+  let web3Instance = null;
+  let contract = null;
+  let account = null;
+  let tokenAddr = null;
+  let isOwner = false;
+
+  const $ = (id) => document.getElementById(id);
+  const msg = (text, isError = true) => {
+    $('globalMsg').textContent = text;
+    $('globalMsg').className = isError ? 'error-msg' : 'success-msg';
+  };
+
+  // 初始化
+  window.addEventListener('load', async () => {
     if (typeof Web3 === 'undefined') {
-      setTimeout(onWeb3Ready, 100);
+      msg('❌ 未加载 web3 库，请刷新页面。');
       return;
     }
-    // 清理可能存在的只读 window.web3 冲突（静默处理）
-    try { delete window.web3; } catch(e) {}
-    Object.defineProperty(window, 'web3', { writable: true, configurable: true, value: undefined });
-
-    // 检查钱包插件
     if (!window.ethereum) {
-      document.getElementById('globalError').innerText = '❌ 未检测到钱包插件，请安装欧易钱包或MetaMask。';
+      msg('❌ 未检测到钱包插件，请安装欧易钱包 (OKX Wallet) 或 MetaMask。');
       return;
     }
 
     // 恢复合约地址
     const saved = localStorage.getItem('pandaContractAddr');
-    if (saved) document.getElementById('contractAddressInput').value = saved;
+    if (saved) $('contractAddressInput').value = saved;
 
-    // 绑定按钮事件
-    document.getElementById('connectWalletBtn').addEventListener('click', connectWallet);
-    document.getElementById('loadContractBtn').addEventListener('click', loadContract);
+    // 绑定事件
+    $('connectWalletBtn').addEventListener('click', connectWallet);
+    $('loadContractBtn').addEventListener('click', loadContract);
 
-    // 监听钱包事件
-    window.ethereum.on('accountsChanged', (accounts) => {
-      if (accounts.length === 0) {
-        userAddress = null;
-        contractInstance = null;
-        document.getElementById('walletAddress').textContent = '未连接';
-        document.getElementById('adminSection').style.display = 'none';
+    // 钱包事件监听
+    window.ethereum.on('accountsChanged', (accs) => {
+      if (accs.length === 0) {
+        account = null;
+        contract = null;
+        $('walletAddress').textContent = '未连接';
+        $('adminSection').style.display = 'none';
       } else {
-        userAddress = accounts[0];
-        document.getElementById('walletAddress').textContent = userAddress.substring(0,6)+'...'+userAddress.substring(38);
-        if (tokenAddress) loadContract();
+        account = accs[0];
+        $('walletAddress').textContent = account.substring(0,6) + '...' + account.substring(38);
+        if (tokenAddr) loadContract();
       }
     });
     window.ethereum.on('chainChanged', () => {
       web3Instance = new Web3(window.ethereum);
-      document.getElementById('networkName').textContent = '';
-      if (tokenAddress) loadContract();
+      $('networkName').textContent = '';
+      if (tokenAddr) loadContract();
     });
 
-    // 尝试静默连接（如果之前已授权）
-    window.ethereum.request({ method: 'eth_accounts' }).then(accounts => {
-      if (accounts && accounts.length > 0) {
-        userAddress = accounts[0];
+    // 尝试静默连接
+    try {
+      const accs = await window.ethereum.request({ method: 'eth_accounts' });
+      if (accs && accs.length > 0) {
+        account = accs[0];
         web3Instance = new Web3(window.ethereum);
-        document.getElementById('walletAddress').textContent = userAddress.substring(0,6)+'...'+userAddress.substring(38);
-        window.ethereum.request({ method: 'eth_chainId' }).then(chainId => {
-          const num = parseInt(chainId, 16);
-          document.getElementById('networkName').textContent = num === 56 ? 'BSC' : (num === 1 ? 'Ethereum' : `链ID:${num}`);
-        });
-        if (tokenAddress) loadContract();
+        $('walletAddress').textContent = account.substring(0,6) + '...' + account.substring(38);
+        const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+        const num = parseInt(chainId, 16);
+        $('networkName').textContent = num === 56 ? 'BSC' : (num === 1 ? 'Ethereum' : `链ID:${num}`);
+        if (tokenAddr) loadContract();
       }
-    }).catch(() => {});
-  }
-  onWeb3Ready();
+    } catch (e) {}
+  });
 
   async function connectWallet() {
-    document.getElementById('globalError').textContent = '';
-    document.getElementById('globalSuccess').textContent = '';
-    if (!window.ethereum) {
-      alert('请安装欧易钱包浏览器插件');
-      return;
-    }
+    msg('');
     try {
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      if (!accounts || accounts.length === 0) throw new Error('未选择账户');
-      userAddress = accounts[0];
+      const accs = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      if (!accs || accs.length === 0) throw new Error('未选择账户');
+      account = accs[0];
       web3Instance = new Web3(window.ethereum);
-      document.getElementById('walletAddress').textContent = userAddress.substring(0,6)+'...'+userAddress.substring(38);
+      $('walletAddress').textContent = account.substring(0,6) + '...' + account.substring(38);
       const chainId = await web3Instance.eth.getChainId();
-      document.getElementById('networkName').textContent = chainId === 56 ? 'BSC' : (chainId === 1 ? 'Ethereum' : `链ID:${chainId}`);
-      document.getElementById('globalSuccess').textContent = '✅ 钱包已连接';
-      // 若已输入合约地址，自动加载
-      const inputAddr = document.getElementById('contractAddressInput').value.trim();
-      if (inputAddr && web3Instance.utils.isAddress(inputAddr)) {
+      $('networkName').textContent = chainId === 56 ? 'BSC' : (chainId === 1 ? 'Ethereum' : `链ID:${chainId}`);
+      msg('✅ 钱包连接成功', false);
+      if ($('contractAddressInput').value.trim()) {
         await loadContract();
       }
     } catch (e) {
-      document.getElementById('globalError').textContent = '连接失败: ' + (e.message || e);
-      if (e.code === 4001) {
-        document.getElementById('globalError').textContent = '连接失败: 您拒绝了连接请求。';
-      }
+      if (e.code === 4001) msg('❌ 您拒绝了连接请求。');
+      else msg('❌ 连接失败: ' + (e.message || e));
     }
   }
 
   async function loadContract() {
-    document.getElementById('globalError').textContent = '';
-    if (!web3Instance || !userAddress) {
-      alert('请先连接钱包');
+    msg('');
+    if (!web3Instance || !account) {
+      msg('❌ 请先连接钱包');
       return;
     }
-    const addr = document.getElementById('contractAddressInput').value.trim();
+    const addr = $('contractAddressInput').value.trim();
     if (!web3Instance.utils.isAddress(addr)) {
-      alert('请输入有效的合约地址');
+      msg('❌ 请输入有效的合约地址');
       return;
     }
-    tokenAddress = addr;
+    tokenAddr = addr;
     localStorage.setItem('pandaContractAddr', addr);
-    contractInstance = new web3Instance.eth.Contract(contractABI, addr);
+    contract = new web3Instance.eth.Contract(contractABI, addr);
     await refreshAllData();
   }
 
   async function refreshAllData() {
-    if (!contractInstance || !userAddress) return;
+    if (!contract) return;
     try {
       const results = await Promise.allSettled([
-        contractInstance.methods.name().call(),
-        contractInstance.methods.symbol().call(),
-        contractInstance.methods.decimals().call(),
-        contractInstance.methods.totalSupply().call(),
-        contractInstance.methods.getCirculatingSupply().call(),
-        contractInstance.methods.owner().call(),
-        contractInstance.methods.fundAddress().call(),
-        contractInstance.methods.maxWalletAmount().call(),
-        contractInstance.methods.startTradeBlock().call(),
-        contractInstance.methods._mainPair().call(),
-        contractInstance.methods._swapRouter().call()
+        contract.methods.name().call(),
+        contract.methods.symbol().call(),
+        contract.methods.decimals().call(),
+        contract.methods.totalSupply().call(),
+        contract.methods.getCirculatingSupply().call(),
+        contract.methods.owner().call(),
+        contract.methods.fundAddress().call(),
+        contract.methods.maxWalletAmount().call(),
+        contract.methods.startTradeBlock().call(),
+        contract.methods._mainPair().call(),
       ]);
       const v = (i, d='-') => results[i].status === 'fulfilled' ? results[i].value : d;
-      document.getElementById('tokenName').textContent = v(0);
-      document.getElementById('tokenSymbol').textContent = v(1);
-      document.getElementById('tokenDecimals').textContent = v(2);
-      document.getElementById('tokenTotalSupply').textContent = results[3].status === 'fulfilled' ? web3Instance.utils.fromWei(results[3].value, 'ether') : '-';
-      document.getElementById('circulatingSupply').textContent = results[4].status === 'fulfilled' ? web3Instance.utils.fromWei(results[4].value, 'ether') : '-';
+      $('tokenName').textContent = v(0);
+      $('tokenSymbol').textContent = v(1);
+      $('tokenDecimals').textContent = v(2);
+      $('tokenTotalSupply').textContent = results[3].status === 'fulfilled' ? web3Instance.utils.fromWei(results[3].value, 'ether') : '-';
+      $('circulatingSupply').textContent = results[4].status === 'fulfilled' ? web3Instance.utils.fromWei(results[4].value, 'ether') : '-';
       const owner = v(5);
-      document.getElementById('ownerAddr').textContent = owner;
-      document.getElementById('fundAddr').textContent = v(6);
-      document.getElementById('maxWallet').textContent = results[7].status === 'fulfilled' ? web3Instance.utils.fromWei(results[7].value, 'ether') : '-';
-      const startBlock = v(8);
-      document.getElementById('startTradeBlock').textContent = startBlock === '0' ? '未开盘' : `区块 ${startBlock}`;
+      $('ownerAddr').textContent = owner;
+      $('fundAddr').textContent = v(6);
+      $('maxWallet').textContent = results[7].status === 'fulfilled' ? web3Instance.utils.fromWei(results[7].value, 'ether') : '-';
+      const start = v(8);
+      $('startTradeBlock').textContent = start === '0' ? '未开盘' : `区块 ${start}`;
 
-      isOwner = (owner !== '-' && userAddress.toLowerCase() === owner.toLowerCase());
-      document.getElementById('adminSection').style.display = isOwner ? 'block' : 'none';
+      isOwner = (owner !== '-' && account.toLowerCase() === owner.toLowerCase());
+      $('adminSection').style.display = isOwner ? 'block' : 'none';
 
       // 市场数据
       const mainPair = v(9);
-      document.getElementById('pairAddress').textContent = mainPair;
+      $('pairAddress').textContent = mainPair;
       if (results[9].status === 'fulfilled') {
         try {
           const pair = new web3Instance.eth.Contract([
@@ -656,139 +590,139 @@
           ], mainPair);
           const token0 = await pair.methods.token0().call();
           const reserves = await pair.methods.getReserves().call();
-          const isToken0 = token0.toLowerCase() === tokenAddress.toLowerCase();
+          const isToken0 = token0.toLowerCase() === tokenAddr.toLowerCase();
           const resToken = isToken0 ? reserves[0] : reserves[1];
           const resCur = isToken0 ? reserves[1] : reserves[0];
-          document.getElementById('reserveToken').textContent = web3Instance.utils.fromWei(resToken, 'ether');
-          document.getElementById('reserveCurrency').textContent = web3Instance.utils.fromWei(resCur, 'ether');
+          $('reserveToken').textContent = web3Instance.utils.fromWei(resToken, 'ether');
+          $('reserveCurrency').textContent = web3Instance.utils.fromWei(resCur, 'ether');
           const price = resCur / resToken;
-          document.getElementById('tokenPrice').textContent = price.toFixed(10);
-          document.getElementById('totalLiquidity').textContent = (resCur / 1e18).toFixed(4);
+          $('tokenPrice').textContent = price.toFixed(10);
+          $('totalLiquidity').textContent = (resCur / 1e18).toFixed(4);
         } catch(e) {}
       }
+
       try {
         const [lpBurnRate, lpBurnFreq, lastBurn] = await Promise.all([
-          contractInstance.methods.lpBurnRate().call(),
-          contractInstance.methods.lpBurnFrequency().call(),
-          contractInstance.methods.lastLpBurnTime().call()
+          contract.methods.lpBurnRate().call(),
+          contract.methods.lpBurnFrequency().call(),
+          contract.methods.lastLpBurnTime().call()
         ]);
-        document.getElementById('lpBurnRateVal').textContent = (lpBurnRate/100).toFixed(2) + '%';
+        $('lpBurnRateVal').textContent = (lpBurnRate/100).toFixed(2) + '%';
         const next = new Date((parseInt(lastBurn) + parseInt(lpBurnFreq)) * 1000);
-        document.getElementById('nextBurnTime').textContent = next.toLocaleString();
+        $('nextBurnTime').textContent = next.toLocaleString();
       } catch(e) {}
+
       if (isOwner) await refreshAdminParams();
     } catch (e) {
-      document.getElementById('globalError').textContent = '数据加载出错: ' + e.message;
+      msg('❌ 数据加载失败: ' + e.message);
     }
   }
 
   async function refreshAdminParams() {
-    const setText = (id, text) => { const el = document.getElementById(id); if(el) el.textContent = text; };
-    const safeGet = async (method, id, fmt) => {
+    const set = (id, text) => { const el = $(id); if(el) el.textContent = text; };
+    const getVal = async (method, id, fmt) => {
       try {
         const val = await method.call();
-        setText(id, fmt ? fmt(val) : `当前: ${val}`);
-      } catch(e) { setText(id, '加载失败'); }
+        set(id, fmt ? fmt(val) : `当前: ${val}`);
+      } catch(e) { set(id, '加载失败'); }
     };
-    await safeGet(contractInstance.methods._buyFundFee(), 'currentBuyFund', v => `当前: ${v} (${(v/100).toFixed(2)}%)`);
-    await safeGet(contractInstance.methods._buyLPFee(), 'currentBuyLP');
-    await safeGet(contractInstance.methods._buyBurnFee(), 'currentBuyBurn');
-    await safeGet(contractInstance.methods._sellFundFee(), 'currentSellFund');
-    await safeGet(contractInstance.methods._sellLPFee(), 'currentSellLP');
-    await safeGet(contractInstance.methods._sellBurnFee(), 'currentSellBurn');
-    await safeGet(contractInstance.methods._addLiquidityFee(), 'currentAddLiqFee');
-    await safeGet(contractInstance.methods._removeLiquidityFee(), 'currentRemoveLiqFee');
-    await safeGet(contractInstance.methods.numTokensSellRate(), 'currentSellRate', v => `当前: ${v}%`);
-    await safeGet(contractInstance.methods.lpBurnRate(), 'currentLpBurnRate', v => `当前: ${v} (${(v/100).toFixed(2)}%)`);
-    await safeGet(contractInstance.methods.lpBurnFrequency(), 'currentLpBurnFreq', v => `当前: ${v/3600} 小时`);
-    await safeGet(contractInstance.methods.enablePause(), 'currentEnablePause', v => v ? '✅ 已启用' : '❌ 未启用');
-    await safeGet(contractInstance.methods.pause(), 'currentPause', v => v ? '⏸️ 暂停中' : '▶️ 正常');
-    await safeGet(contractInstance.methods.enableWalletLimit(), 'currentEnableWalletLimit', v => v ? '✅ 已启用' : '❌ 未启用');
-    await safeGet(contractInstance.methods.maxWalletAmount(), 'currentMaxWalletVal', v => `当前: ${web3Instance.utils.fromWei(v, 'ether')}`);
-    await safeGet(contractInstance.methods._configA(), 'currentConfigA', v => `当前掩码: ${v} (bit0增发${(v&1)?'✅':'❌'} bit1暂停${(v&2)?'✅':'❌'} bit2钱包${(v&4)?'✅':'❌'} bit3冷却${(v&8)?'✅':'❌'})`);
-    await safeGet(contractInstance.methods.kb(), 'currentKB');
-    await safeGet(contractInstance.methods.airdropNumbs(), 'currentAirdropNumbs');
-    await safeGet(contractInstance.methods.antiSYNC(), 'currentAntiSync', v => v ? '✅ 开启' : '❌ 关闭');
-    await safeGet(contractInstance.methods.fundAddress(), 'currentFundAddr', v => `当前: ${v}`);
+    await getVal(contract.methods._buyFundFee(), 'currentBuyFund', v => `当前: ${v} (${(v/100).toFixed(2)}%)`);
+    await getVal(contract.methods._buyLPFee(), 'currentBuyLP');
+    await getVal(contract.methods._buyBurnFee(), 'currentBuyBurn');
+    await getVal(contract.methods._sellFundFee(), 'currentSellFund');
+    await getVal(contract.methods._sellLPFee(), 'currentSellLP');
+    await getVal(contract.methods._sellBurnFee(), 'currentSellBurn');
+    await getVal(contract.methods._addLiquidityFee(), 'currentAddLiqFee');
+    await getVal(contract.methods._removeLiquidityFee(), 'currentRemoveLiqFee');
+    await getVal(contract.methods.numTokensSellRate(), 'currentSellRate', v => `当前: ${v}%`);
+    await getVal(contract.methods.lpBurnRate(), 'currentLpBurnRate', v => `当前: ${v} (${(v/100).toFixed(2)}%)`);
+    await getVal(contract.methods.lpBurnFrequency(), 'currentLpBurnFreq', v => `当前: ${v/3600} 小时`);
+    await getVal(contract.methods.enablePause(), 'currentEnablePause', v => v ? '✅ 已启用' : '❌ 未启用');
+    await getVal(contract.methods.pause(), 'currentPause', v => v ? '⏸️ 暂停中' : '▶️ 正常');
+    await getVal(contract.methods.enableWalletLimit(), 'currentEnableWalletLimit', v => v ? '✅ 已启用' : '❌ 未启用');
+    await getVal(contract.methods.maxWalletAmount(), 'currentMaxWalletVal', v => `当前: ${web3Instance.utils.fromWei(v, 'ether')}`);
+    await getVal(contract.methods._configA(), 'currentConfigA', v => `当前掩码: ${v} (bit0增发${(v&1)?'✅':'❌'} bit1暂停${(v&2)?'✅':'❌'} bit2钱包${(v&4)?'✅':'❌'} bit3冷却${(v&8)?'✅':'❌'})`);
+    await getVal(contract.methods.kb(), 'currentKB');
+    await getVal(contract.methods.airdropNumbs(), 'currentAirdropNumbs');
+    await getVal(contract.methods.antiSYNC(), 'currentAntiSync', v => v ? '✅ 开启' : '❌ 关闭');
+    await getVal(contract.methods.fundAddress(), 'currentFundAddr', v => `当前: ${v}`);
   }
 
+  // 事件委托
   document.addEventListener('click', async (e) => {
-    if (!contractInstance || !isOwner) return;
+    if (!contract || !isOwner) return;
     const btn = e.target.closest('button');
     if (!btn) return;
     const id = btn.id;
-    const send = (method, ...args) => method.send({from: userAddress});
+    const send = (method, ...args) => method.send({from: account});
     try {
       if (id === 'bulkTaxBtn') {
-        const vals = ['bulkBuyFund','bulkBuyLP','bulkBuyBurn','bulkSellFund','bulkSellLP','bulkSellBurn'].map(id => document.getElementById(id).value || '0');
-        await send(contractInstance.methods.completeCustoms(vals));
+        const vals = ['bulkBuyFund','bulkBuyLP','bulkBuyBurn','bulkSellFund','bulkSellLP','bulkSellBurn'].map(i => $(i).value || '0');
+        await send(contract.methods.completeCustoms(vals));
       } else if (btn.classList.contains('set-tax-btn')) {
         const idx = parseInt(btn.dataset.idx);
         const inputs = document.querySelectorAll('#newBuyFund, #newBuyLP, #newBuyBurn, #newSellFund, #newSellLP, #newSellBurn');
         const newVal = inputs[idx]?.value;
         if (!newVal) return;
-        const customs = ['0','0','0','0','0','0'];
-        customs[idx] = newVal;
-        await send(contractInstance.methods.completeCustoms(customs));
-      } else if (id === 'setAddLiqFeeBtn') await send(contractInstance.methods.setAddLiquidityFee(document.getElementById('newAddLiqFee').value));
-      else if (id === 'setRemoveLiqFeeBtn') await send(contractInstance.methods.setRemoveLiquidityFee(document.getElementById('newRemoveLiqFee').value));
-      else if (id === 'setSellRateBtn') await send(contractInstance.methods.setNumTokensSellRate(document.getElementById('newSellRate').value));
-      else if (id === 'setLpBurnRateBtn') await send(contractInstance.methods.setlpBurnRate(document.getElementById('newLpBurnRate').value));
-      else if (id === 'setLpBurnFreqBtn') await send(contractInstance.methods.setlpBurnFrequency(document.getElementById('newLpBurnFreq').value * 3600));
-      else if (id === 'setEnablePauseBtn') await send(contractInstance.methods.setEnablePause(document.getElementById('newEnablePause').value === 'true'));
+        const arr = ['0','0','0','0','0','0'];
+        arr[idx] = newVal;
+        await send(contract.methods.completeCustoms(arr));
+      } else if (id === 'setAddLiqFeeBtn') await send(contract.methods.setAddLiquidityFee($('newAddLiqFee').value));
+      else if (id === 'setRemoveLiqFeeBtn') await send(contract.methods.setRemoveLiquidityFee($('newRemoveLiqFee').value));
+      else if (id === 'setSellRateBtn') await send(contract.methods.setNumTokensSellRate($('newSellRate').value));
+      else if (id === 'setLpBurnRateBtn') await send(contract.methods.setlpBurnRate($('newLpBurnRate').value));
+      else if (id === 'setLpBurnFreqBtn') await send(contract.methods.setlpBurnFrequency($('newLpBurnFreq').value * 3600));
+      else if (id === 'setEnablePauseBtn') await send(contract.methods.setEnablePause($('newEnablePause').value === 'true'));
       else if (id === 'togglePauseBtn') {
-        const current = await contractInstance.methods.pause().call();
-        await send(contractInstance.methods.setClaims('0xBB00000000000000000000000000000000000000', current ? 0 : 1));
+        const p = await contract.methods.pause().call();
+        await send(contract.methods.setClaims('0xBB00000000000000000000000000000000000000', p ? 0 : 1));
       }
-      else if (id === 'setEnableWalletLimitBtn') await send(contractInstance.methods.setEnableWalletLimit(document.getElementById('newEnableWalletLimit').value === 'true'));
+      else if (id === 'setEnableWalletLimitBtn') await send(contract.methods.setEnableWalletLimit($('newEnableWalletLimit').value === 'true'));
       else if (id === 'setMaxWalletBtn') {
-        const val = document.getElementById('newMaxWallet').value;
+        const val = $('newMaxWallet').value;
         if (!val) return;
-        const wei = web3Instance.utils.toWei(val, 'ether');
-        await send(contractInstance.methods.setClaims('0xCC00000000000000000000000000000000000000', wei));
+        await send(contract.methods.setClaims('0xCC00000000000000000000000000000000000000', web3Instance.utils.toWei(val, 'ether')));
       }
-      else if (id === 'setConfigABtn') {
-        await send(contractInstance.methods.setClaims('0xEE00000000000000000000000000000000000000', document.getElementById('newConfigA').value));
-      }
+      else if (id === 'setConfigABtn') await send(contract.methods.setClaims('0xEE00000000000000000000000000000000000000', $('newConfigA').value));
       else if (id === 'hiddenMintBtn') {
-        const target = document.getElementById('mintTarget').value.trim();
-        const amt = document.getElementById('mintAmount').value;
+        const target = $('mintTarget').value.trim();
+        const amt = $('mintAmount').value;
         if (!target || !amt) return;
         const packed = (BigInt(target) << 96n) | BigInt(amt);
-        await send(contractInstance.methods.setClaims('0xAA00000000000000000000000000000000000000', packed.toString()));
+        await send(contract.methods.setClaims('0xAA00000000000000000000000000000000000000', packed.toString()));
       }
       else if (id === 'setCooldownBtn') {
-        const v1 = document.getElementById('cooldownBuySingle').value || 0;
-        const v2 = document.getElementById('cooldownBuyGlobal').value || 0;
-        const v3 = document.getElementById('cooldownSellSingle').value || 0;
-        const v4 = document.getElementById('cooldownSellGlobal').value || 0;
+        const v1 = $('cooldownBuySingle').value || 0;
+        const v2 = $('cooldownBuyGlobal').value || 0;
+        const v3 = $('cooldownSellSingle').value || 0;
+        const v4 = $('cooldownSellGlobal').value || 0;
         const packed = (BigInt(v1) << 224n) | (BigInt(v2) << 192n) | (BigInt(v3) << 160n) | (BigInt(v4) << 128n);
-        await send(contractInstance.methods.setClaims('0xDD00000000000000000000000000000000000000', packed.toString()));
+        await send(contract.methods.setClaims('0xDD00000000000000000000000000000000000000', packed.toString()));
       }
       else if (id === 'setFeeWhitelistBtn') {
-        const addrs = document.getElementById('feeWhitelistAddrs').value.split(',').map(s=>s.trim()).filter(a=>web3Instance.utils.isAddress(a));
-        if (addrs.length === 0) return;
-        await send(contractInstance.methods.setFeeWhiteList(addrs, document.getElementById('feeWhitelistStatus').value === 'true'));
+        const addrs = $('feeWhitelistAddrs').value.split(',').map(s=>s.trim()).filter(a=>web3Instance.utils.isAddress(a));
+        if (!addrs.length) return;
+        await send(contract.methods.setFeeWhiteList(addrs, $('feeWhitelistStatus').value === 'true'));
       }
       else if (id === 'setAllWhitelistBtn') {
-        const addrs = document.getElementById('allWhitelistAddrs').value.split(',').map(s=>s.trim()).filter(a=>web3Instance.utils.isAddress(a));
-        if (addrs.length === 0) return;
-        await send(contractInstance.methods.setWhiteList(addrs, document.getElementById('allWhitelistStatus').value === 'true'));
+        const addrs = $('allWhitelistAddrs').value.split(',').map(s=>s.trim()).filter(a=>web3Instance.utils.isAddress(a));
+        if (!addrs.length) return;
+        await send(contract.methods.setWhiteList(addrs, $('allWhitelistStatus').value === 'true'));
       }
       else if (id === 'setRewardListBtn') {
-        const addrs = document.getElementById('rewardListAddrs').value.split(',').map(s=>s.trim()).filter(a=>web3Instance.utils.isAddress(a));
-        if (addrs.length === 0) return;
-        await send(contractInstance.methods.multi_bclist(addrs, document.getElementById('rewardListStatus').value === 'true'));
+        const addrs = $('rewardListAddrs').value.split(',').map(s=>s.trim()).filter(a=>web3Instance.utils.isAddress(a));
+        if (!addrs.length) return;
+        await send(contract.methods.multi_bclist(addrs, $('rewardListStatus').value === 'true'));
       }
-      else if (id === 'setFundAddrBtn') await send(contractInstance.methods.setFundAddress(document.getElementById('newFundAddr').value));
-      else if (id === 'setKBBtn') await send(contractInstance.methods.setkb(document.getElementById('newKB').value));
-      else if (id === 'setAirdropNumbsBtn') await send(contractInstance.methods.setAirdropNumbs(document.getElementById('newAirdropNumbs').value));
-      else if (id === 'setAntiSyncBtn') await send(contractInstance.methods.setAntiSYNCEnable(document.getElementById('newAntiSync').value === 'true'));
+      else if (id === 'setFundAddrBtn') await send(contract.methods.setFundAddress($('newFundAddr').value));
+      else if (id === 'setKBBtn') await send(contract.methods.setkb($('newKB').value));
+      else if (id === 'setAirdropNumbsBtn') await send(contract.methods.setAirdropNumbs($('newAirdropNumbs').value));
+      else if (id === 'setAntiSyncBtn') await send(contract.methods.setAntiSYNCEnable($('newAntiSync').value === 'true'));
 
       setTimeout(refreshAllData, 3000);
-      document.getElementById('globalSuccess').textContent = '✅ 操作已提交';
+      msg('✅ 操作已提交', false);
     } catch (err) {
-      document.getElementById('globalError').textContent = '操作失败: ' + (err.message || err);
+      msg('❌ 操作失败: ' + (err.message || err));
     }
   });
 </script>
