@@ -3,69 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>稳定机制验证 · 零门槛 · 无API</title>
+    <title>稳定机制验证器 · 自动过滤事件</title>
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
     <style>
         body {
             background: #0a0e17; color: #e2e8f0;
-            font-family: 'Segoe UI', sans-serif;
+            font-family: 'Segoe UI', system-ui, sans-serif;
             padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh;
         }
         .card {
             background: #111827; border: 1px solid #1f2a3a;
-            border-radius: 20px; padding: 28px; max-width: 650px; width: 100%;
+            border-radius: 24px; padding: 30px; max-width: 680px; width: 100%;
         }
-        h2 { color: #3b82f6; text-align: center; margin-bottom: 10px; }
+        h2 { color: #3b82f6; text-align: center; margin-bottom: 8px; }
         input, button {
-            padding: 12px; border-radius: 12px; border: 1px solid #1f2a3a;
-            background: #1e293b; color: #fff; font-size: 1rem; width: 100%; box-sizing: border-box;
-            margin: 8px 0;
+            padding: 14px; border-radius: 14px; border: 1px solid #1f2a3a;
+            background: #1e293b; color: #fff; font-size: 1rem; width: 100%;
+            box-sizing: border-box; margin: 8px 0;
         }
         button {
-            background: #3b82f6; font-weight: bold; cursor: pointer; border: none;
-            transition: 0.2s;
+            background: #3b82f6; font-weight: 600; cursor: pointer; border: none;
+            transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px;
         }
-        button:hover { filter: brightness(1.2); }
+        button:hover { filter: brightness(1.2); transform: scale(1.01); }
         button.green { background: #10b981; }
-        button.yellow { background: #f59e0b; }
+        button.yellow { background: #f59e0b; color: #000; }
         .flex-row { display: flex; gap: 10px; }
         .flex-row button { flex: 1; }
         .result {
-            background: #0f172a; border-radius: 12px; padding: 16px;
-            margin-top: 15px; font-size: 1rem;
+            background: #0f172a; border-radius: 14px; padding: 16px;
+            margin-top: 15px; font-size: 0.95rem;
         }
-        .step {
-            background: #1e293b; border-left: 4px solid #3b82f6;
-            padding: 12px; margin: 10px 0; border-radius: 8px;
+        .tip {
+            background: #1e293b; border-left: 4px solid #f59e0b;
+            padding: 14px; margin: 15px 0; border-radius: 10px; font-size: 0.9rem;
         }
-        .copy-area {
-            background: #000; color: #10b981; padding: 10px;
-            border-radius: 8px; font-family: monospace; word-break: break-all;
+        hr { border-color: #1f2a3a; margin: 20px 0; }
+        .code {
+            background: #000; color: #10b981; padding: 6px 10px;
+            border-radius: 6px; font-family: monospace; font-size: 0.85rem;
         }
-        hr { border-color: #1f2a3a; margin: 16px 0; }
     </style>
 </head>
 <body>
 <div class="card">
     <h2>🛡️ 稳定机制验证器</h2>
-    <p style="text-align:center; color:#94a3b8; font-size:0.85rem;">无需 API Key · 完全免费 · 100% 准确</p>
+    <p style="text-align:center; color:#94a3b8;">100% 准确 · 无需 API · 自动过滤事件</p>
 
-    <input type="text" id="contractAddress" placeholder="粘贴 PandaTokenV4 合约地址">
+    <input type="text" id="contractAddress" placeholder="粘贴 PandaTokenV4 合约地址" />
 
     <div class="flex-row">
         <button onclick="loadContract()">📦 加载合约</button>
-        <button onclick="autoLoad()" class="green">⚡ 自动加载上次地址</button>
+        <button onclick="autoLoad()" class="green">⚡ 加载上次地址</button>
     </div>
-    <div id="status" style="text-align:center; margin:8px 0;"></div>
+    <div id="status" style="text-align:center; margin:10px 0;"></div>
 
     <div id="actions" style="display:none;">
         <div class="flex-row">
-            <button onclick="openBscScanEvents()" class="yellow">🔍 跳转 BscScan 查看事件</button>
-            <button onclick="copyEventNames()">📋 复制事件名</button>
+            <button onclick="openSellEvents()" class="yellow">📤 一键查看卖出执行</button>
+            <button onclick="openBuyEvents()" class="yellow">📥 一键查看回购执行</button>
         </div>
-        <div class="step">
-            👆 点击<strong>“跳转 BscScan”</strong>，在新打开的页面中按 <strong>Ctrl+V</strong> 粘贴搜索<br>
-            看到 <code>StabilizeSellExecuted</code> 或 <code>StabilizeBuyExecuted</code> 即表示执行过
+        <div class="tip">
+            👆 点击上面按钮后，BscScan 页面会<strong>自动只显示该事件</strong>。<br>
+            ✅ 如果出现交易记录 → 执行过<br>
+            ❌ 如果显示“No matching events” → 从未触发
         </div>
 
         <button onclick="checkBalance()">💰 一键查询合约余额</button>
@@ -73,12 +74,10 @@
     </div>
 
     <hr>
-    <div style="font-size:0.8rem; color:#94a3b8;">
-        <b>📖 怎么判断？</b><br>
-        • BscScan 页面搜到 <b>StabilizeSellExecuted</b> → ✅ 卖出已执行<br>
-        • 搜到 <b>StabilizeBuyExecuted</b> → ✅ 回购已执行<br>
-        • 如果一条都搜不到 → ❌ 稳定机制从未触发<br>
-        • 余额查询：卖出执行后合约 USDT 会增加，回购执行后分发器代币会增加
+    <div style="font-size:0.82rem; color:#94a3b8;">
+        <b>📖 怎么看？</b><br>
+        • 卖出执行后合约稳定币增加，回购执行后分发器代币增加<br>
+        • 链上事件永久保存，无法伪造
     </div>
 </div>
 
@@ -96,14 +95,23 @@ const abi = [
     "function currency() view returns (address)",
     "function currencyIsEth() view returns (bool)",
     "function balanceOf(address) view returns (uint256)",
-    "function _LPRewardDistributor() view returns (address)"
+    "function _LPRewardDistributor() view returns (address)",
+    "event StabilizeSellExecuted(uint256 indexed tokensSold, uint256 indexed usdtReceived)",
+    "event StabilizeBuyExecuted(uint256 indexed usdtSpent, uint256 indexed tokensBought)"
 ];
+
+// 提前计算事件签名哈希 (topic0)
+const SELL_TOPIC = ethers.utils.id('StabilizeSellExecuted(uint256,uint256)');
+const BUY_TOPIC = ethers.utils.id('StabilizeBuyExecuted(uint256,uint256)');
+
+function toWei(val, dec=18) { try { return ethers.utils.parseUnits(String(val), dec); } catch { return ethers.BigNumber.from(0); } }
+function fromWei(val, dec=18) { try { return ethers.utils.formatUnits(val, dec); } catch { return String(val); } }
 
 async function loadContract() {
     const addr = document.getElementById('contractAddress').value.trim();
     if (!ethers.utils.isAddress(addr)) return alert('地址无效');
     currentAddr = addr;
-    localStorage.setItem('verify_addr', addr);
+    localStorage.setItem('verify2_addr', addr);
     try {
         contract = new ethers.Contract(addr, abi, provider);
         const dec = await contract.decimals();
@@ -118,7 +126,7 @@ async function loadContract() {
 }
 
 async function autoLoad() {
-    const saved = localStorage.getItem('verify_addr');
+    const saved = localStorage.getItem('verify2_addr');
     if (saved) {
         document.getElementById('contractAddress').value = saved;
         await loadContract();
@@ -127,20 +135,18 @@ async function autoLoad() {
     }
 }
 
-function openBscScanEvents() {
+// 打开 BscScan 事件页面，通过 #events 和 topic 参数自动过滤
+function openSellEvents() {
     if (!currentAddr) return alert('请先加载合约');
-    const url = `https://bscscan.com/address/${currentAddr}#events`;
+    // BscScan 支持 ?topic0=xxx 参数直接过滤事件
+    const url = `https://bscscan.com/address/${currentAddr}#events?topic0=${SELL_TOPIC}`;
     window.open(url, '_blank');
-    // 自动复制事件名到剪贴板
-    copyEventNames();
-    alert('已打开 BscScan 事件页面，并复制了事件名。\n在页面搜索框粘贴（Ctrl+V）即可搜索。');
 }
 
-function copyEventNames() {
-    const text = 'StabilizeSellExecuted';
-    navigator.clipboard.writeText(text).then(() => {
-        // 提示已复制
-    });
+function openBuyEvents() {
+    if (!currentAddr) return alert('请先加载合约');
+    const url = `https://bscscan.com/address/${currentAddr}#events?topic0=${BUY_TOPIC}`;
+    window.open(url, '_blank');
 }
 
 async function checkBalance() {
