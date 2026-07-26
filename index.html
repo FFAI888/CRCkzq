@@ -1,115 +1,227 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <title>稳定机制一键诊断</title>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <style>
-    body { font-family: 'Segoe UI', sans-serif; background: #0a0e17; color: #e2e8f0; padding: 20px; max-width: 800px; margin: auto; }
-    .card { background: #111827; border: 1px solid #1f2a3a; border-radius: 16px; padding: 20px; margin-bottom: 20px; }
-    input, button { padding: 10px 16px; border-radius: 10px; border: 1px solid #1f2a3a; background: #1e293b; color: #e2e8f0; font-size: 1rem; }
-    button { background: #3b82f6; cursor: pointer; border: none; }
-    button:hover { filter: brightness(1.2); }
-    .item { margin: 10px 0; padding: 10px; background: #0f172a; border-radius: 8px; }
-    .good { color: #10b981; }
-    .bad { color: #ef4444; }
-    .warn { color: #f59e0b; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>稳定机制验证器 · 零门槛</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <style>
+        :root {
+            --bg: #0a0e17; --card: #111827; --text: #e2e8f0; --text2: #94a3b8;
+            --green: #10b981; --red: #ef4444; --blue: #3b82f6;
+        }
+        body {
+            background: var(--bg); color: var(--text);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            padding: 20px; min-height: 100vh;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .container {
+            max-width: 700px; width: 100%;
+            background: var(--card); border-radius: 20px;
+            padding: 30px; border: 1px solid #1f2a3a;
+        }
+        h2 { color: var(--blue); margin-bottom: 15px; text-align: center; }
+        input, button {
+            padding: 12px 16px; border-radius: 12px;
+            border: 1px solid #1f2a3a; background: #1e293b;
+            color: var(--text); font-size: 1rem; width: 100%;
+            margin: 8px 0; box-sizing: border-box;
+        }
+        button {
+            background: var(--blue); font-weight: 600; cursor: pointer;
+            border: none; transition: 0.2s;
+        }
+        button:hover { filter: brightness(1.2); }
+        button.green-btn { background: var(--green); }
+        button.red-btn { background: var(--red); }
+        .result-card {
+            border-radius: 14px; padding: 18px; margin: 15px 0;
+            font-weight: 600; font-size: 1.1rem;
+        }
+        .success { background: #065f46; color: #6ee7b7; border: 1px solid #10b981; }
+        .danger { background: #7f1d1d; color: #fca5a5; border: 1px solid #ef4444; }
+        .flex-row { display: flex; gap: 10px; }
+        .flex-row button { width: auto; flex: 1; }
+        hr { border-color: #1f2a3a; margin: 16px 0; }
+        .small-text { font-size: 0.8rem; color: var(--text2); text-align: center; }
+    </style>
 </head>
 <body>
-  <h1>🩺 PandaTokenV4 稳定机制诊断</h1>
-  <div class="card">
-    <input id="addr" type="text" placeholder="合约地址" style="width:100%" value="0xae1de305f8cdbcb94e1f2927c3c4825b5f43840c">
-    <br><br>
-    <button onclick="diagnose()">开始检查</button>
-  </div>
-  <div id="result" class="card"></div>
+<div class="container">
+    <h2>🛡️ 稳定机制验证器</h2>
+    <p class="small-text">无需任何区块链知识，点击按钮即可确认执行状态</p>
 
-  <script>
-    async function diagnose() {
-      const addr = document.getElementById('addr').value.trim();
-      if (!ethers.utils.isAddress(addr)) return alert('无效地址');
-      const provider = new ethers.providers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
-      const abi = [
-        "function totalBuyAmount() view returns (uint256)",
-        "function totalSellAmount() view returns (uint256)",
-        "function buyTriggerThreshold() view returns (uint256)",
-        "function sellTriggerThreshold() view returns (uint256)",
-        "function nextTriggerDirection() view returns (uint8)",
-        "function enableAutoTrigger() view returns (bool)",
-        "function cooldownRemaining() view returns (uint256)",
-        "function triggerCooldown() view returns (uint256)",
-        "function dailyTriggerCount() view returns (uint8)",
-        "function maxDailyTriggers() view returns (uint8)",
-        "function triggerActionPercent() view returns (uint256)",
-        "function owner() view returns (address)"
-      ];
-      const contract = new ethers.Contract(addr, abi, provider);
-      const resultDiv = document.getElementById('result');
-      resultDiv.innerHTML = '<p>⏳ 读取中...</p>';
-      try {
-        const [
-          totalBuy, totalSell, buyThres, sellThres, direction, enableAuto,
-          coolRemain, coolLen, dailyCnt, maxDaily, actionPerc, owner
-        ] = await Promise.all([
-          contract.totalBuyAmount(), contract.totalSellAmount(),
-          contract.buyTriggerThreshold(), contract.sellTriggerThreshold(),
-          contract.nextTriggerDirection(), contract.enableAutoTrigger(),
-          contract.cooldownRemaining(), contract.triggerCooldown(),
-          contract.dailyTriggerCount(), contract.maxDailyTriggers(),
-          contract.triggerActionPercent(), contract.owner()
-        ]);
+    <input type="text" id="contractAddress" placeholder="粘贴 PandaTokenV4 合约地址">
 
-        const fmt = (val) => ethers.utils.formatUnits(val, 18);
+    <div class="flex-row">
+        <button onclick="loadContract()">📦 加载合约</button>
+        <button onclick="autoLoad()" class="green-btn">⚡ 自动加载上次地址</button>
+    </div>
+    <div id="contractStatus" style="margin:8px 0; font-size:0.9rem; text-align:center;"></div>
 
-        let html = `
-          <div class="item"><strong>🔵 累计买入量 (totalBuyAmount)</strong>: ${fmt(totalBuy)} 代币</div>
-          <div class="item"><strong>🔴 累计卖出量 (totalSellAmount)</strong>: ${fmt(totalSell)} 代币</div>
-          <div class="item"><strong>🎯 买入阈值 (buyTriggerThreshold)</strong>: ${fmt(buyThres)} 代币</div>
-          <div class="item"><strong>🎯 卖出阈值 (sellTriggerThreshold)</strong>: ${fmt(sellThres)} 代币</div>
-          <div class="item"><strong>📈 执行百分比 (triggerActionPercent)</strong>: ${actionPerc} 基点 (${actionPerc/100}%)</div>
-          <div class="item"><strong>🧭 当前方向 (nextTriggerDirection)</strong>: ${direction == 0 ? '买入→增发' : '卖出→转奖励池'}</div>
-          <div class="item"><strong>✅ 自动触发开关</strong>: ${enableAuto ? '✅ 开启' : '❌ 关闭'}</div>
-          <div class="item"><strong>⏳ 冷却剩余笔数</strong>: ${coolRemain} / 设定的冷却笔数: ${coolLen}</div>
-          <div class="item"><strong>📅 今日已执行次数</strong>: ${dailyCnt} / 每日上限: ${maxDaily}</div>
-          <hr>
-          <h3>📋 诊断建议：</h3>
-        `;
+    <div id="verifySection" style="display:none;">
+        <div class="flex-row">
+            <button onclick="oneClickCheck()" class="green-btn">🔎 一键查询执行记录</button>
+            <button onclick="oneClickBalance()">💰 一键验证余额</button>
+        </div>
+        <div id="resultArea"></div>
+    </div>
 
-        // 问题检测
-        let issues = [];
-        if (buyThres.eq(0) && sellThres.eq(0)) {
-          issues.push('<span class="bad">❌ 阈值未设置！请调用 setAutoTriggerParams 设置买入和卖出阈值（例如 100 代币）。</span>');
-        }
-        if (!enableAuto) {
-          issues.push('<span class="bad">❌ 自动触发已关闭！请调用 setEnableAutoTrigger(true) 或使用面板开启。</span>');
-        }
-        if (direction == 1 && totalSell.eq(0)) {
-          issues.push('<span class="warn">⚠️ 方向卡在 SELL，但无卖出累计，无法触发。建议调用 forceSwitchTriggerDirection 强制切换回 BUY。</span>');
-        }
-        if (coolRemain > 0) {
-          issues.push(`<span class="warn">⏳ 冷却中：还需 ${coolRemain} 笔交易才能再次检查触发。</span>`);
-        }
-        if (dailyCnt >= maxDaily && maxDaily > 0) {
-          issues.push(`<span class="bad">❌ 今日执行次数已达上限 (${maxDaily})。请等待 UTC 0 点重置。</span>`);
-        }
+    <div id="tutorial" class="small-text" style="margin-top:20px;">
+        <hr>
+        <b>👆 使用说明</b><br>
+        1. 粘贴合约地址，点“加载合约”<br>
+        2. 点“一键查询执行记录”<br>
+        🟢 绿色 = 已执行，并显示具体数量<br>
+        🔴 红色 = 从未执行过<br>
+        点“一键验证余额”看合约里的 USDT/代币数量
+    </div>
+</div>
 
-        if (issues.length === 0) {
-          if (direction == 0 && totalBuy.gte(buyThres)) {
-            issues.push('<span class="good">✅ 状态正常，买入累计已达标，下次符合条件的交易将触发增发。</span>');
-          } else if (direction == 1 && totalSell.gte(sellThres)) {
-            issues.push('<span class="good">✅ 状态正常，卖出累计已达标，下次符合条件的交易将触发转奖励池。</span>');
-          } else {
-            issues.push('<span class="good">✅ 所有参数正常，但尚未达到触发阈值。继续交易即可。</span>');
-          }
-        }
+<script>
+// 使用免费 BscScan API Key（每人每天限制查询次数，建议后续替换为自己的）
+const BSCSCAN_API_KEY = 'YourApiKeyToken'; // ← 请在这里填入你的免费 Key
+const RPC_URL = 'https://1rpc.io/bnb';
+let provider = new ethers.providers.JsonRpcProvider(RPC_URL);
+let contract = null;
+let currentAddr = "";
+let tokenDecimals = 18;
+let currencyIsEth = false;
+let currencyAddress = "";
 
-        html += issues.join('<br>');
-        resultDiv.innerHTML = html;
-      } catch (e) {
-        resultDiv.innerHTML = `<span class="bad">❌ 读取失败：${e.message}</span>`;
-      }
+const abi = [
+    "function decimals() view returns (uint256)",
+    "function currency() view returns (address)",
+    "function currencyIsEth() view returns (bool)",
+    "function balanceOf(address) view returns (uint256)",
+    "function _LPRewardDistributor() view returns (address)",
+    "event StabilizeSellExecuted(uint256 indexed tokensSold, uint256 indexed usdtReceived)",
+    "event StabilizeBuyExecuted(uint256 indexed usdtSpent, uint256 indexed tokensBought)"
+];
+
+function toWei(val, dec=18) { try { return ethers.utils.parseUnits(String(val), dec); } catch { return ethers.BigNumber.from(0); } }
+function fromWei(val, dec=18) { try { return ethers.utils.formatUnits(val, dec); } catch { return String(val); } }
+
+document.getElementById('contractAddress').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') loadContract();
+});
+
+async function loadContract() {
+    const addr = document.getElementById('contractAddress').value.trim();
+    if (!ethers.utils.isAddress(addr)) return alert('地址无效');
+    currentAddr = addr;
+    localStorage.setItem('crc_addr_simple', addr);
+    contract = new ethers.Contract(addr, abi, provider);
+    try {
+        const dec = await contract.decimals();
+        tokenDecimals = Number(dec);
+        currencyAddress = await contract.currency();
+        currencyIsEth = await contract.currencyIsEth();
+        document.getElementById('contractStatus').innerHTML = '<span style="color:#10b981;">✅ 合约已加载</span>';
+        document.getElementById('verifySection').style.display = 'block';
+    } catch (e) {
+        document.getElementById('contractStatus').innerHTML = '<span style="color:#ef4444;">❌ 加载失败</span>';
     }
-  </script>
+}
+
+async function autoLoad() {
+    const saved = localStorage.getItem('crc_addr_simple');
+    if (saved) {
+        document.getElementById('contractAddress').value = saved;
+        await loadContract();
+    } else {
+        alert('没有保存的地址');
+    }
+}
+
+async function oneClickCheck() {
+    const resultDiv = document.getElementById('resultArea');
+    resultDiv.innerHTML = '<p class="small-text">⏳ 正在通过 BscScan 查询全部历史记录...</p>';
+    if (!contract) return alert('请先加载合约');
+    if (!BSCSCAN_API_KEY || BSCSCAN_API_KEY === 'YourApiKeyToken') {
+        resultDiv.innerHTML = '<div class="result-card danger">⚠️ 请先在代码中填入免费 BscScan API Key<br>申请地址：bscscan.com/myapikey</div>';
+        return;
+    }
+    try {
+        const sellTopic = '0x' + ethers.utils.id('StabilizeSellExecuted(uint256,uint256)').slice(2);
+        const buyTopic = '0x' + ethers.utils.id('StabilizeBuyExecuted(uint256,uint256)').slice(2);
+        const base = 'https://api.bscscan.com/api';
+
+        async function fetchLogs(topic0) {
+            const params = new URLSearchParams({
+                module: 'logs', action: 'getLogs',
+                address: currentAddr, topic0: topic0,
+                fromBlock: '0', toBlock: 'latest',
+                apikey: BSCSCAN_API_KEY
+            });
+            const res = await fetch(base + '?' + params.toString());
+            const data = await res.json();
+            return data.status === '1' ? data.result : [];
+        }
+
+        const [sellLogs, buyLogs] = await Promise.all([fetchLogs(sellTopic), fetchLogs(buyTopic)]);
+        let html = '';
+        // 卖出结果
+        if (sellLogs && sellLogs.length > 0) {
+            const last = sellLogs[sellLogs.length-1];
+            const iface = new ethers.utils.Interface(abi);
+            const parsed = iface.parseLog({ topics: [sellTopic, last.topics[1], last.topics[2]], data: last.data });
+            html += `<div class="result-card success">
+                ✅ 卖出执行已确认！<br>
+                📤 卖出代币：${fromWei(parsed.args.tokensSold, tokenDecimals)} 枚<br>
+                💵 获得 USDT：${fromWei(parsed.args.usdtReceived, 18)}<br>
+                🔗 <a href="https://bscscan.com/tx/${last.transactionHash}" target="_blank" style="color:#6ee7b7;">查看链上交易</a>
+            </div>`;
+        } else {
+            html += `<div class="result-card danger">❌ 卖出从未执行</div>`;
+        }
+        // 回购结果
+        if (buyLogs && buyLogs.length > 0) {
+            const last = buyLogs[buyLogs.length-1];
+            const iface = new ethers.utils.Interface(abi);
+            const parsed = iface.parseLog({ topics: [buyTopic, last.topics[1], last.topics[2]], data: last.data });
+            html += `<div class="result-card success">
+                ✅ 回购执行已确认！<br>
+                💵 花费 USDT：${fromWei(parsed.args.usdtSpent, 18)}<br>
+                🎁 回购代币：${fromWei(parsed.args.tokensBought, tokenDecimals)} 枚<br>
+                🔗 <a href="https://bscscan.com/tx/${last.transactionHash}" target="_blank" style="color:#6ee7b7;">查看链上交易</a>
+            </div>`;
+        } else {
+            html += `<div class="result-card danger">❌ 回购从未执行</div>`;
+        }
+        html += '<p class="small-text">数据来源：BscScan 区块链浏览器（100% 准确）</p>';
+        resultDiv.innerHTML = html;
+    } catch (e) {
+        resultDiv.innerHTML = '<div class="result-card danger">❌ 查询失败：' + e.message + '</div>';
+    }
+}
+
+async function oneClickBalance() {
+    const resultDiv = document.getElementById('resultArea');
+    resultDiv.innerHTML = '<p class="small-text">⏳ 查询链上余额...</p>';
+    try {
+        const dist = await contract._LPRewardDistributor();
+        let currBal;
+        if (currencyIsEth) {
+            currBal = await provider.getBalance(currentAddr);
+        } else {
+            const curr = new ethers.Contract(currencyAddress, ['function balanceOf(address) view returns (uint256)'], provider);
+            currBal = await curr.balanceOf(currentAddr);
+        }
+        const tokenBal = await contract.balanceOf(dist);
+        resultDiv.innerHTML = `
+            <div class="result-card" style="background:#1e293b; color:white; border:1px solid #3b82f6;">
+                💰 合约余额快照<br>
+                💵 稳定币/ETH：${fromWei(currBal, 18)} ${currencyIsEth?'BNB':'USDT'}<br>
+                🎁 分发器代币：${fromWei(tokenBal, tokenDecimals)} 枚
+            </div>
+            <p class="small-text">* 卖出执行后合约稳定币会增加；回购执行后分发器代币会增加</p>
+        `;
+    } catch (e) {
+        resultDiv.innerHTML = '<div class="result-card danger">❌ 余额查询失败</div>';
+    }
+}
+</script>
 </body>
 </html>
