@@ -38,6 +38,20 @@ body {
 }
 .network-badge { background: #1f6feb; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; }
 
+/* 网络选择下拉菜单 */
+.network-select {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  color: #e6edf3;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  width: auto;
+  margin: 0;
+}
+.network-select:focus { outline: none; border-color: #1f6feb; }
+
 /* 统计 */
 .stats {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -208,6 +222,10 @@ label { font-size: 13px; color: #8b949e; display: block; margin-top: 12px; }
     🏠 My<span>Token</span>Hub <span class="version">Admin v2.0</span>
   </div>
   <div class="wallet-box">
+    <select id="networkSelector" class="network-select" onchange="switchNetwork()">
+      <option value="0x61">🟢 BSC 测试网</option>
+      <option value="0x38">🔴 BSC 主网</option>
+    </select>
     <span id="networkBadge" class="network-badge hidden">未连接</span>
     <span id="walletAddr" class="wallet-addr hidden">未连接</span>
     <button id="connectBtn" onclick="connectWallet()">🔌 连接钱包</button>
@@ -589,21 +607,110 @@ function logTx(type, hash, detail) {
 }
 
 // ============================================================
+// 网络切换
+// ============================================================
+async function switchNetwork() {
+  const chainId = document.getElementById("networkSelector").value;
+  try {
+    await window.ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: chainId }],
+    });
+    location.reload();
+  } catch (e) {
+    if (e.code === 4902) {
+      if (chainId === "0x61") {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [{
+            chainId: "0x61",
+            chainName: "BSC Testnet",
+            rpcUrls: ["https://bsc-testnet-rpc.publicnode.com"],
+            nativeCurrency: { name: "tBNB", symbol: "tBNB", decimals: 18 },
+            blockExplorerUrls: ["https://testnet.bscscan.com"]
+          }]
+        });
+      } else if (chainId === "0x38") {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [{
+            chainId: "0x38",
+            chainName: "BNB Smart Chain",
+            rpcUrls: ["https://bsc-dataseed.binance.org"],
+            nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
+            blockExplorerUrls: ["https://bscscan.com"]
+          }]
+        });
+      }
+      location.reload();
+    } else {
+      alert("切换网络失败：" + e.message);
+    }
+  }
+}
+
+// ============================================================
 // 连接钱包
 // ============================================================
 async function connectWallet() {
   try {
     if (!window.ethereum) { alert("请先安装钱包插件"); return; }
+
+    // 使用下拉菜单里选的网络
+    const targetChainId = document.getElementById("networkSelector").value;
+    try {
+      await window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: targetChainId }],
+      });
+    } catch (switchError) {
+      if (switchError.code === 4902) {
+        if (targetChainId === "0x61") {
+          await window.ethereum.request({
+            method: "wallet_addEthereumChain",
+            params: [{
+              chainId: "0x61",
+              chainName: "BSC Testnet",
+              rpcUrls: ["https://bsc-testnet-rpc.publicnode.com"],
+              nativeCurrency: { name: "tBNB", symbol: "tBNB", decimals: 18 },
+              blockExplorerUrls: ["https://testnet.bscscan.com"]
+            }]
+          });
+        } else {
+          await window.ethereum.request({
+            method: "wallet_addEthereumChain",
+            params: [{
+              chainId: "0x38",
+              chainName: "BNB Smart Chain",
+              rpcUrls: ["https://bsc-dataseed.binance.org"],
+              nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
+              blockExplorerUrls: ["https://bscscan.com"]
+            }]
+          });
+        }
+      }
+    }
+
     provider = new ethers.BrowserProvider(window.ethereum);
     await provider.send("eth_requestAccounts", []);
     signer = await provider.getSigner();
     currentAccount = await signer.getAddress();
     const network = await provider.getNetwork();
 
+    // 同步网络下拉选择器
+    if (network.chainId.toString() === "97") {
+      document.getElementById("networkSelector").value = "0x61";
+    } else if (network.chainId.toString() === "56") {
+      document.getElementById("networkSelector").value = "0x38";
+    }
+
     document.getElementById("walletAddr").classList.remove("hidden");
     document.getElementById("walletAddr").textContent = shortAddr(currentAccount);
     document.getElementById("networkBadge").classList.remove("hidden");
-    document.getElementById("networkBadge").textContent = "ChainID: " + network.chainId;
+    document.getElementById("networkBadge").textContent =
+      network.chainId.toString() === "97" ? "🟢 测试网" :
+      network.chainId.toString() === "56" ? "🔴 主网" :
+      "ChainID: " + network.chainId;
     document.getElementById("connectBtn").textContent = "✅ 已连接";
 
     loadConfigFromStorage();
