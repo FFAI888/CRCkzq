@@ -1,219 +1,682 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PancakeSwap V2 交易对地址计算器（含链上验证）</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background: #0f172a;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            background: #1e293b;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-            padding: 32px;
-            max-width: 640px;
-            width: 100%;
-            color: #e2e8f0;
-        }
-        h1 {
-            font-size: 26px;
-            margin-bottom: 6px;
-            color: #fbbf24;
-        }
-        .subtitle {
-            color: #94a3b8;
-            margin-bottom: 24px;
-            font-size: 14px;
-        }
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #cbd5e1;
-        }
-        input {
-            width: 100%;
-            padding: 12px;
-            background: #0f172a;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            font-size: 14px;
-            margin-bottom: 20px;
-            box-sizing: border-box;
-            color: #e2e8f0;
-        }
-        input:focus {
-            outline: none;
-            border-color: #fbbf24;
-        }
-        button {
-            background: #fbbf24;
-            color: #0f172a;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            font-weight: 700;
-            margin-right: 10px;
-            transition: background 0.2s;
-        }
-        button:hover {
-            background: #f59e0b;
-        }
-        .result {
-            margin-top: 24px;
-            padding: 18px;
-            background: #0f172a;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            word-break: break-all;
-            font-family: monospace;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-        .verified {
-            border-color: #10b981;
-            background: #022c22;
-        }
-        .mismatch {
-            border-color: #ef4444;
-            background: #2c0a0a;
-        }
-        .info {
-            font-size: 12px;
-            color: #64748b;
-            margin-top: 16px;
-        }
-        .loading {
-            color: #fbbf24;
-        }
-    </style>
+<meta charset="UTF-8">
+<title>MyTokenHub · 我的代币平台</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, "Microsoft YaHei", sans-serif;
+  background: #0f1420;
+  color: #e6edf3;
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+h1 { font-size: 24px; margin-bottom: 8px; }
+h2 { font-size: 18px; margin: 20px 0 12px; color: #58a6ff; }
+.card {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+button {
+  background: #238636;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-right: 8px;
+  margin-top: 8px;
+}
+button:hover { background: #2ea043; }
+button:disabled { background: #484f58; cursor: not-allowed; }
+button.gray { background: #30363d; }
+button.gray:hover { background: #484f58; }
+button.red { background: #da3633; }
+button.red:hover { background: #f85149; }
+input, textarea, select {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  color: #e6edf3;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  width: 100%;
+  margin-top: 4px;
+  font-family: inherit;
+}
+label { font-size: 13px; color: #8b949e; display: block; margin-top: 12px; }
+.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+.row > div { flex: 1; min-width: 150px; }
+.status {
+  padding: 10px;
+  border-radius: 6px;
+  margin-top: 12px;
+  font-size: 14px;
+  display: none;
+}
+.status.show { display: block; }
+.status.ok { background: #1f3a24; border: 1px solid #238636; }
+.status.err { background: #3d1a1a; border: 1px solid #da3633; }
+.status.info { background: #1a2a3d; border: 1px solid #1f6feb; }
+.addr {
+  background: #0d1117;
+  padding: 10px;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 12px;
+  word-break: break-all;
+  margin-top: 8px;
+}
+.token-card {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.token-card h3 { color: #58a6ff; margin-bottom: 8px; }
+.token-card .price { font-size: 20px; color: #3fb950; margin: 8px 0; }
+.token-card .info { font-size: 13px; color: #8b949e; margin: 4px 0; }
+.tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.tabs button { background: #30363d; }
+.tabs button.active { background: #1f6feb; }
+.hidden { display: none; }
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1>🥞 PancakeSwap V2 交易对地址计算器</h1>
-        <p class="subtitle">自动计算 + 链上验证，确保和薄饼平台完全一致</p>
 
-        <label for="tokenA">代币 A 合约地址</label>
-        <input type="text" id="tokenA" placeholder="0x...">
+<h1>🏠 MyTokenHub · 我的代币平台</h1>
+<div style="color:#8b949e; font-size:13px;">任何人都可以申请、买卖、转账自己的代币</div>
 
-        <label for="tokenB">代币 B 合约地址</label>
-        <input type="text" id="tokenB" placeholder="0x...">
+<!-- ====== 钱包连接 ====== -->
+<div class="card">
+  <h2>1. 连接钱包</h2>
+  <button id="connectBtn" onclick="connectWallet()">🔌 连接钱包</button>
+  <div id="walletInfo" class="addr hidden"></div>
+</div>
 
-        <button onclick="calculatePair()">计算地址</button>
-        <button onclick="verifyOnChain()">链上验证</button>
+<!-- ====== 初始化配置 ====== -->
+<div class="card">
+  <h2>2. 配置合约地址</h2>
+  <label>HubProxy 地址（你的主合约地址）</label>
+  <input id="hubAddress" placeholder="0x..."></input>
+  <label>TestCoin 地址（你的主币地址）</label>
+  <input id="tokenAddress" placeholder="0x..."></input>
+  <button onclick="saveConfig()">💾 保存配置</button>
+  <div id="configStatus" class="status"></div>
+</div>
 
-        <div id="result" class="result" style="display: none;"></div>
+<!-- ====== 主界面 ====== -->
+<div id="mainUI" class="hidden">
 
-        <p class="info">
-            Factory: <code>0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73</code><br>
-            Init Code Hash: <code>0x00fb7f630766e6a796048ea87d01acd3068e8ff67d078148a3fa3f4a84f69bd5</code>
-        </p>
+  <!-- 标签页切换 -->
+  <div class="tabs">
+    <button class="active" onclick="switchTab('market', this)">📈 代币市场</button>
+    <button onclick="switchTab('mywallet', this)">💰 我的钱包</button>
+    <button onclick="switchTab('apply', this)">➕ 申请代币</button>
+    <button onclick="switchTab('manage', this)">⚙️ 管理面板</button>
+  </div>
+
+  <!-- ====== 标签页1：代币市场 ====== -->
+  <div id="tab-market" class="card">
+    <h2>代币市场</h2>
+    <button onclick="loadAllTokens()">🔄 刷新列表</button>
+    <div id="tokenList" style="margin-top:16px;"></div>
+  </div>
+
+  <!-- ====== 标签页2：我的钱包 ====== -->
+  <div id="tab-mywallet" class="card hidden">
+    <h2>我的钱包</h2>
+    <label>主币余额</label>
+    <div id="myBaseBalance" class="addr">未加载</div>
+    <button onclick="loadMyBalance()">🔄 刷新我的余额</button>
+
+    <h2 style="margin-top:20px;">我的代币</h2>
+    <div id="myTokens"></div>
+  </div>
+
+  <!-- ====== 标签页3：申请代币 ====== -->
+  <div id="tab-apply" class="card hidden">
+    <h2>申请我的代币</h2>
+    <div class="row">
+      <div>
+        <label>代币名称</label>
+        <input id="applyName" placeholder="比如：钛白粉"></input>
+      </div>
+      <div>
+        <label>代币符号</label>
+        <input id="applySymbol" placeholder="比如：TIO2"></input>
+      </div>
     </div>
+    <label>注入主币数量（比如 100）</label>
+    <input id="applyBase" type="number" placeholder="100"></input>
+    <label>注入代币数量（比如 250）</label>
+    <input id="applyToken" type="number" placeholder="250"></input>
+    <button onclick="doApplyToken()">✅ 提交申请</button>
+    <div id="applyStatus" class="status"></div>
+  </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
-    <script>
-        const FACTORY = "0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73";
-        const INIT_CODE_HASH = "0x00fb7f630766e6a796048ea87d01acd3068e8ff67d078148a3fa3f4a84f69bd5";
+  <!-- ====== 标签页4：管理面板 ====== -->
+  <div id="tab-manage" class="card hidden">
+    <h2>管理面板（仅管理员）</h2>
 
-        // BSC 公共 RPC（也可以换成其他）
-        const RPC_URL = "https://bsc-dataseed.binance.org/";
+    <h3 style="margin-top:16px; color:#58a6ff;">手续费设置</h3>
+    <label>手续费率（万分之，30 = 0.3%）</label>
+    <input id="mgFeeRate" type="number" placeholder="30"></input>
+    <button onclick="setFeeRate()">保存手续费</button>
 
-        function getTokenAddresses() {
-            const tokenA = document.getElementById("tokenA").value.trim();
-            const tokenB = document.getElementById("tokenB").value.trim();
-            if (!ethers.isAddress(tokenA) || !ethers.isAddress(tokenB)) {
-                throw new Error("请输入有效的合约地址（0x 开头，40位十六进制）");
-            }
-            const a = ethers.getAddress(tokenA);
-            const b = ethers.getAddress(tokenB);
-            // 自动排序
-            const [token0, token1] = BigInt(a) < BigInt(b) ? [a, b] : [b, a];
-            return { token0, token1 };
-        }
+    <label style="margin-top:16px;">申请费（主币数量，0 = 免费）</label>
+    <input id="mgApplyFee" type="number" placeholder="0"></input>
+    <button onclick="setApplyFee()">保存申请费</button>
 
-        function computePairLocally(token0, token1) {
-            const salt = ethers.keccak256(
-                ethers.solidityPacked(["address", "address"], [token0, token1])
-            );
-            return ethers.getCreate2Address(FACTORY, salt, INIT_CODE_HASH);
-        }
+    <h3 style="margin-top:24px; color:#58a6ff;">用户管理</h3>
+    <label>添加用户（每行一个钱包地址）</label>
+    <textarea id="mgUserList" rows="4" placeholder="0x...&#10;0x..."></textarea>
+    <button onclick="addUsers()">批量添加用户</button>
+    <button class="gray" onclick="loadUserCount()">查看用户数</button>
+    <div id="mgUserCount" class="addr">未加载</div>
 
-        function calculatePair() {
-            const resultDiv = document.getElementById("result");
-            resultDiv.style.display = "block";
-            resultDiv.classList.remove("verified", "mismatch");
-            resultDiv.innerHTML = "";
+    <h3 style="margin-top:24px; color:#58a6ff;">空投</h3>
+    <label>代币 ID（tokenId）</label>
+    <input id="mgAirdropTokenId" type="number" placeholder="1"></input>
+    <label>每人发多少</label>
+    <input id="mgAirdropAmount" type="number" placeholder="10"></input>
+    <label>备注</label>
+    <input id="mgAirdropMemo" placeholder="首轮空投"></input>
+    <button onclick="airdropAll()">🎁 发给名单所有人</button>
 
-            try {
-                const { token0, token1 } = getTokenAddresses();
-                const pair = computePairLocally(token0, token1);
+    <h3 style="margin-top:24px; color:#58a6ff;">系统控制</h3>
+    <button class="red" onclick="pauseSystem()">⏸️ 暂停系统</button>
+    <button onclick="unpauseSystem()">▶️ 恢复正常</button>
+    <button class="gray" onclick="withdrawFees()">💵 提取手续费</button>
 
-                resultDiv.innerHTML = `
-                    <strong>token0：</strong> ${token0}<br>
-                    <strong>token1：</strong> ${token1}<br><br>
-                    <strong>本地计算结果：</strong><br>
-                    <span style="color: #10b981;">${pair}</span>
-                `;
-            } catch (error) {
-                resultDiv.innerHTML = `<span style="color: #ef4444;">错误：${error.message}</span>`;
-            }
-        }
+    <div id="mgStatus" class="status"></div>
+  </div>
 
-        async function verifyOnChain() {
-            const resultDiv = document.getElementById("result");
-            resultDiv.style.display = "block";
-            resultDiv.classList.remove("verified", "mismatch");
-            resultDiv.innerHTML = '<span class="loading">正在查询链上数据...</span>';
+</div>
 
-            try {
-                const { token0, token1 } = getTokenAddresses();
-                const localPair = computePairLocally(token0, token1);
+<script>
+// ============================================================
+// 合约 ABI（接口定义）
+// ============================================================
+const HUB_ABI = [
+  // 只读函数
+  "function owner() view returns (address)",
+  "function baseToken() view returns (address)",
+  "function tokenCount() view returns (uint256)",
+  "function feeRate() view returns (uint256)",
+  "function applyFee() view returns (uint256)",
+  "function userCount() view returns (uint256)",
+  "function balanceOf(uint256 tokenId, address account) view returns (uint256)",
+  "function getPrice(uint256 tokenId) view returns (uint256)",
+  "function getTokenInfo(uint256 tokenId) view returns (address, string, string, uint256, uint128, uint128, uint8)",
+  "function getUsers(uint256 offset, uint256 limit) view returns (address[])",
+  "function getTokenOwners(uint256 from, uint256 to) view returns (address[], string[], string[])",
+  // 写入函数
+  "function applyForToken(string name_, string symbol_, uint64 ratio_, uint128 baseLiquidity, uint128 tokenLiquidity) returns (uint256)",
+  "function buy(uint256 tokenId, uint256 baseIn, uint256 minOut) returns (uint256)",
+  "function sell(uint256 tokenId, uint256 tokenIn, uint256 minOut) returns (uint256)",
+  "function transfer(uint256 tokenId, address to, uint256 amount)",
+  "function mint(uint256 tokenId, address to, uint256 amount)",
+  "function burn(uint256 tokenId, uint256 amount)",
+  "function setFeeRate(uint256 newRate)",
+  "function setApplyFee(uint256 newFee)",
+  "function setFeeRecipient(address newRecipient)",
+  "function setStatus(uint256 tokenId, uint8 status)",
+  "function setRatio(uint256 tokenId, uint64 newRatio)",
+  "function addUser(address user)",
+  "function addUsers(address[] users)",
+  "function removeUser(address user)",
+  "function joinAsUser()",
+  "function airdropToAllUsers(uint256 tokenId, uint256 amountPerUser, string memo)",
+  "function withdrawFees(uint256 tokenId, address to, uint256 amount)",
+  "function pause()",
+  "function unpause()"
+];
 
-                // 通过 RPC 调用 factory.getPair(token0, token1)
-                const provider = new ethers.JsonRpcProvider(RPC_URL);
-                const factoryAbi = [
-                    "function getPair(address tokenA, address tokenB) external view returns (address pair)"
-                ];
-                const factoryContract = new ethers.Contract(FACTORY, factoryAbi, provider);
-                const onChainPair = await factoryContract.getPair(token0, token1);
+const TOKEN_ABI = [
+  "function name() view returns (string)",
+  "function symbol() view returns (string)",
+  "function decimals() view returns (uint8)",
+  "function totalSupply() view returns (uint256)",
+  "function balanceOf(address) view returns (uint256)",
+  "function allowance(address owner, address spender) view returns (uint256)",
+  "function approve(address spender, uint256 amount) returns (bool)",
+  "function transfer(address to, uint256 amount) returns (bool)"
+];
 
-                if (onChainPair.toLowerCase() === localPair.toLowerCase()) {
-                    resultDiv.classList.add("verified");
-                    resultDiv.innerHTML = `
-                        <strong>token0：</strong> ${token0}<br>
-                        <strong>token1：</strong> ${token1}<br><br>
-                        <strong>本地计算结果：</strong> ${localPair}<br>
-                        <strong>链上实际结果：</strong> ${onChainPair}<br><br>
-                        <span style="color: #10b981;">✅ 验证通过：计算结果和薄饼平台完全一致</span>
-                    `;
-                } else if (onChainPair === "0x0000000000000000000000000000000000000000") {
-                    resultDiv.innerHTML = `
-                        <strong>本地计算结果：</strong> ${localPair}<br><br>
-                        <span style="color: #fbbf24;">⚠️ 链上尚未创建该交易对，但本地计算结果应为正确地址</span>
-                    `;
-                } else {
-                    resultDiv.classList.add("mismatch");
-                    resultDiv.innerHTML = `
-                        <strong>本地计算结果：</strong> ${localPair}<br>
-                        <strong>链上实际结果：</strong> ${onChainPair}<br><br>
-                        <span style="color: #ef4444;">❌ 结果不一致！可能 init code hash 有误</span>
-                    `;
-                }
-            } catch (error) {
-                resultDiv.innerHTML = `<span style="color: #ef4444;">错误：${error.message}</span>`;
-            }
-        }
-    </script>
+// ============================================================
+// 全局变量
+// ============================================================
+let provider = null;
+let signer = null;
+let hubContract = null;
+let tokenContract = null;
+let currentAccount = null;
+let config = { hubAddress: "", tokenAddress: "" };
+
+// ============================================================
+// 工具函数
+// ============================================================
+function showStatus(id, msg, type) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = "status show " + (type || "info");
+  el.textContent = msg;
+}
+
+function hideStatus(id) {
+  const el = document.getElementById(id);
+  if (el) el.className = "status";
+}
+
+function shortAddr(a) {
+  return a ? a.slice(0, 6) + "..." + a.slice(-4) : "";
+}
+
+function parseEther(v) {
+  return ethers.parseEther(String(v));
+}
+
+function formatEther(v) {
+  return ethers.formatEther(v);
+}
+
+// ============================================================
+// 第1步：连接钱包
+// ============================================================
+async function connectWallet() {
+  try {
+    if (!window.ethereum) {
+      alert("请先安装 MetaMask 或 OKX 钱包插件！");
+      return;
+    }
+    provider = new ethers.BrowserProvider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    signer = await provider.getSigner();
+    currentAccount = await signer.getAddress();
+
+    const network = await provider.getNetwork();
+    document.getElementById("walletInfo").classList.remove("hidden");
+    document.getElementById("walletInfo").innerHTML =
+      `✅ 已连接：<b>${shortAddr(currentAccount)}</b><br>网络 ChainID：${network.chainId}`;
+    document.getElementById("connectBtn").textContent = "已连接";
+
+    // 加载保存的配置
+    loadConfigFromStorage();
+  } catch (e) {
+    alert("连接失败：" + e.message);
+  }
+}
+
+// ============================================================
+// 第2步：保存配置
+// ============================================================
+function saveConfig() {
+  const hub = document.getElementById("hubAddress").value.trim();
+  const token = document.getElementById("tokenAddress").value.trim();
+  if (!hub || !token) {
+    showStatus("configStatus", "请填写两个地址", "err");
+    return;
+  }
+  config.hubAddress = hub;
+  config.tokenAddress = token;
+  localStorage.setItem("hub_config", JSON.stringify(config));
+
+  // 创建合约实例
+  if (signer) {
+    hubContract = new ethers.Contract(hub, HUB_ABI, signer);
+    tokenContract = new ethers.Contract(token, TOKEN_ABI, signer);
+  }
+
+  showStatus("configStatus", "✅ 配置已保存", "ok");
+  document.getElementById("mainUI").classList.remove("hidden");
+
+  // 加载数据
+  loadAllTokens();
+}
+
+function loadConfigFromStorage() {
+  const saved = localStorage.getItem("hub_config");
+  if (saved) {
+    try {
+      config = JSON.parse(saved);
+      if (config.hubAddress) document.getElementById("hubAddress").value = config.hubAddress;
+      if (config.tokenAddress) document.getElementById("tokenAddress").value = config.tokenAddress;
+
+      if (signer && config.hubAddress && config.tokenAddress) {
+        hubContract = new ethers.Contract(config.hubAddress, HUB_ABI, signer);
+        tokenContract = new ethers.Contract(config.tokenAddress, TOKEN_ABI, signer);
+        document.getElementById("mainUI").classList.remove("hidden");
+        loadAllTokens();
+      }
+    } catch (e) {}
+  }
+}
+
+// ============================================================
+// 标签页切换
+// ============================================================
+function switchTab(tab, btn) {
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  document.querySelectorAll("[id^='tab-']").forEach(el => el.classList.add("hidden"));
+  document.getElementById("tab-" + tab).classList.remove("hidden");
+
+  if (tab === "mywallet") loadMyBalance();
+  if (tab === "manage") loadUserCount();
+}
+
+// ============================================================
+// 代币市场：加载所有代币
+// ============================================================
+async function loadAllTokens() {
+  if (!hubContract) {
+    alert("请先连接钱包并保存配置");
+    return;
+  }
+  const listEl = document.getElementById("tokenList");
+  listEl.innerHTML = "加载中...";
+
+  try {
+    const count = await hubContract.tokenCount();
+    const total = Number(count);
+    if (total === 0) {
+      listEl.innerHTML = "<p style='color:#8b949e'>还没有任何代币。去「申请代币」创建第一个吧！</p>";
+      return;
+    }
+
+    let html = "";
+    for (let i = 1; i <= total; i++) {
+      const info = await hubContract.getTokenInfo(i);
+      const owner = info[0];
+      const name = info[1];
+      const symbol = info[2];
+      const price = formatEther(info[3]);
+      const baseReserve = formatEther(info[4]);
+      const tokenReserve = formatEther(info[5]);
+      const status = Number(info[6]);
+      const isActive = (status & 4) !== 0;
+
+      html += `
+        <div class="token-card">
+          <h3>${name} (${symbol})</h3>
+          <div class="price">${Number(price).toFixed(4)} 主币</div>
+          <div class="info">池子：${Number(baseReserve).toFixed(2)} 主币 / ${Number(tokenReserve).toFixed(2)} ${symbol}</div>
+          <div class="info">拥有者：${shortAddr(owner)}</div>
+          <div class="info">状态：${isActive ? "✅ 交易中" : "⏸️ 已暂停"}</div>
+          <div style="margin-top:12px;">
+            <input id="buyAmount_${i}" type="number" placeholder="投入主币数量" style="width:150px;display:inline-block;margin-right:8px;">
+            <button onclick="doBuy(${i})">买入</button>
+            <input id="sellAmount_${i}" type="number" placeholder="卖出代币数量" style="width:150px;display:inline-block;margin-right:8px;margin-top:8px;">
+            <button onclick="doSell(${i})">卖出</button>
+          </div>
+        </div>
+      `;
+    }
+    listEl.innerHTML = html;
+  } catch (e) {
+    listEl.innerHTML = "<p style='color:#f85149'>加载失败：" + e.message + "</p>";
+  }
+}
+
+// ============================================================
+// 买入
+// ============================================================
+async function doBuy(tokenId) {
+  const amountEl = document.getElementById("buyAmount_" + tokenId);
+  const baseIn = amountEl.value;
+  if (!baseIn || Number(baseIn) <= 0) { alert("请输入投入的主币数量"); return; }
+
+  try {
+    // 先检查授权
+    const allowance = await tokenContract.allowance(currentAccount, config.hubAddress);
+    const need = parseEther(baseIn);
+    if (allowance < need) {
+      showStatus("configStatus", "需要先授权主币，请在钱包中确认...", "info");
+      const tx1 = await tokenContract.approve(config.hubAddress, ethers.MaxUint256);
+      await tx1.wait();
+    }
+
+    const tx = await hubContract.buy(tokenId, parseEther(baseIn), 0);
+    showStatus("configStatus", "交易提交中...", "info");
+    await tx.wait();
+    showStatus("configStatus", "✅ 买入成功！", "ok");
+    loadAllTokens();
+  } catch (e) {
+    showStatus("configStatus", "❌ 买入失败：" + (e.reason || e.message), "err");
+  }
+}
+
+// ============================================================
+// 卖出
+// ============================================================
+async function doSell(tokenId) {
+  const amountEl = document.getElementById("sellAmount_" + tokenId);
+  const tokenIn = amountEl.value;
+  if (!tokenIn || Number(tokenIn) <= 0) { alert("请输入卖出的代币数量"); return; }
+
+  try {
+    const tx = await hubContract.sell(tokenId, parseEther(tokenIn), 0);
+    showStatus("configStatus", "交易提交中...", "info");
+    await tx.wait();
+    showStatus("configStatus", "✅ 卖出成功！", "ok");
+    loadAllTokens();
+  } catch (e) {
+    showStatus("configStatus", "❌ 卖出失败：" + (e.reason || e.message), "err");
+  }
+}
+
+// ============================================================
+// 我的钱包
+// ============================================================
+async function loadMyBalance() {
+  if (!hubContract || !tokenContract) return;
+  try {
+    // 主币余额
+    const bal = await tokenContract.balanceOf(currentAccount);
+    document.getElementById("myBaseBalance").textContent = formatEther(bal) + " 个主币";
+
+    // 我的代币
+    const count = Number(await hubContract.tokenCount());
+    let html = "";
+    for (let i = 1; i <= count; i++) {
+      const myBal = await hubContract.balanceOf(i, currentAccount);
+      const info = await hubContract.getTokenInfo(i);
+      const balStr = formatEther(myBal);
+      if (Number(balStr) > 0) {
+        html += `
+          <div class="token-card">
+            <h3>${info[1]} (${info[2]})</h3>
+            <div class="price">${Number(balStr).toFixed(4)} 个</div>
+            <div style="margin-top:8px;">
+              <input id="txTo_${i}" placeholder="转给谁（0x...）" style="width:280px;display:inline-block;">
+              <input id="txAmt_${i}" type="number" placeholder="数量" style="width:120px;display:inline-block;">
+              <button onclick="doTransfer(${i})">转账</button>
+            </div>
+          </div>
+        `;
+      }
+    }
+    if (!html) html = "<p style='color:#8b949e'>你还没有任何代币。去「代币市场」买一些，或「申请代币」创建你自己的。</p>";
+    document.getElementById("myTokens").innerHTML = html;
+  } catch (e) {
+    document.getElementById("myTokens").innerHTML = "<p style='color:#f85149'>加载失败：" + e.message + "</p>";
+  }
+}
+
+// ============================================================
+// 转账
+// ============================================================
+async function doTransfer(tokenId) {
+  const to = document.getElementById("txTo_" + tokenId).value.trim();
+  const amt = document.getElementById("txAmt_" + tokenId).value;
+  if (!to || !amt) { alert("请填写收件人和数量"); return; }
+
+  try {
+    const tx = await hubContract.transfer(tokenId, to, parseEther(amt));
+    await tx.wait();
+    alert("✅ 转账成功");
+    loadMyBalance();
+  } catch (e) {
+    alert("❌ 转账失败：" + (e.reason || e.message));
+  }
+}
+
+// ============================================================
+// 申请代币
+// ============================================================
+async function doApplyToken() {
+  const name = document.getElementById("applyName").value.trim();
+  const symbol = document.getElementById("applySymbol").value.trim();
+  const base = document.getElementById("applyBase").value;
+  const token = document.getElementById("applyToken").value;
+
+  if (!name || !symbol || !base || !token) {
+    showStatus("applyStatus", "请填写所有字段", "err");
+    return;
+  }
+
+  try {
+    // 先检查主币授权
+    const allowance = await tokenContract.allowance(currentAccount, config.hubAddress);
+    const need = parseEther(base);
+    if (allowance < need) {
+      showStatus("applyStatus", "需要先授权主币，请在钱包中确认...", "info");
+      const tx1 = await tokenContract.approve(config.hubAddress, ethers.MaxUint256);
+      await tx1.wait();
+    }
+
+    showStatus("applyStatus", "提交中，请在钱包中确认...", "info");
+    const tx = await hubContract.applyForToken(
+      name,
+      symbol,
+      400000, // ratio 展示用，固定 0.4
+      parseEther(base),
+      parseEther(token)
+    );
+    await tx.wait();
+    showStatus("applyStatus", "✅ 申请成功！去「代币市场」查看你的代币。", "ok");
+    loadAllTokens();
+  } catch (e) {
+    showStatus("applyStatus", "❌ 申请失败：" + (e.reason || e.message), "err");
+  }
+}
+
+// ============================================================
+// 管理面板
+// ============================================================
+async function setFeeRate() {
+  const v = document.getElementById("mgFeeRate").value;
+  try {
+    const tx = await hubContract.setFeeRate(v);
+    await tx.wait();
+    showStatus("mgStatus", "✅ 手续费率已更新为 " + (v/100) + "%", "ok");
+  } catch (e) {
+    showStatus("mgStatus", "❌ 失败：" + (e.reason || e.message), "err");
+  }
+}
+
+async function setApplyFee() {
+  const v = document.getElementById("mgApplyFee").value;
+  try {
+    const tx = await hubContract.setApplyFee(parseEther(v));
+    await tx.wait();
+    showStatus("mgStatus", "✅ 申请费已更新", "ok");
+  } catch (e) {
+    showStatus("mgStatus", "❌ 失败：" + (e.reason || e.message), "err");
+  }
+}
+
+async function addUsers() {
+  const raw = document.getElementById("mgUserList").value.trim();
+  if (!raw) return;
+  const arr = raw.split("\n").map(s => s.trim()).filter(s => s.startsWith("0x"));
+  if (arr.length === 0) { alert("请输入至少一个地址"); return; }
+  try {
+    const tx = await hubContract.addUsers(arr);
+    await tx.wait();
+    showStatus("mgStatus", "✅ 已添加 " + arr.length + " 个用户", "ok");
+    loadUserCount();
+  } catch (e) {
+    showStatus("mgStatus", "❌ 失败：" + (e.reason || e.message), "err");
+  }
+}
+
+async function loadUserCount() {
+  try {
+    const c = await hubContract.userCount();
+    document.getElementById("mgUserCount").textContent = "当前用户数：" + c.toString();
+  } catch (e) {}
+}
+
+async function airdropAll() {
+  const tokenId = document.getElementById("mgAirdropTokenId").value;
+  const amount = document.getElementById("mgAirdropAmount").value;
+  const memo = document.getElementById("mgAirdropMemo").value || "空投";
+  if (!tokenId || !amount) { alert("请填写代币ID和数量"); return; }
+  try {
+    const tx = await hubContract.airdropToAllUsers(tokenId, parseEther(amount), memo);
+    await tx.wait();
+    showStatus("mgStatus", "✅ 空投成功！", "ok");
+  } catch (e) {
+    showStatus("mgStatus", "❌ 失败：" + (e.reason || e.message), "err");
+  }
+}
+
+async function pauseSystem() {
+  try {
+    const tx = await hubContract.pause();
+    await tx.wait();
+    showStatus("mgStatus", "⏸️ 系统已暂停", "ok");
+  } catch (e) {
+    showStatus("mgStatus", "❌ 失败：" + (e.reason || e.message), "err");
+  }
+}
+
+async function unpauseSystem() {
+  try {
+    const tx = await hubContract.unpause();
+    await tx.wait();
+    showStatus("mgStatus", "▶️ 系统已恢复", "ok");
+  } catch (e) {
+    showStatus("mgStatus", "❌ 失败：" + (e.reason || e.message), "err");
+  }
+}
+
+async function withdrawFees() {
+  const tokenId = prompt("提取哪个代币的手续费？输入 tokenId（比如 1）");
+  if (!tokenId) return;
+  const amount = prompt("提取多少主币？");
+  if (!amount) return;
+  try {
+    const tx = await hubContract.withdrawFees(tokenId, currentAccount, parseEther(amount));
+    await tx.wait();
+    showStatus("mgStatus", "✅ 手续费已提取", "ok");
+  } catch (e) {
+    showStatus("mgStatus", "❌ 失败：" + (e.reason || e.message), "err");
+  }
+}
+
+// ============================================================
+// 页面加载时自动恢复
+// ============================================================
+window.addEventListener("load", () => {
+  loadConfigFromStorage();
+});
+
+// 监听钱包切换
+if (window.ethereum) {
+  window.ethereum.on("accountsChanged", () => location.reload());
+  window.ethereum.on("chainChanged", () => location.reload());
+}
+</script>
 </body>
 </html>
